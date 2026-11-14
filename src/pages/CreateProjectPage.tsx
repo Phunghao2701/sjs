@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Box, Button, FormControl, IconButton, InputBase, MenuItem, Paper, Select, TextField, Typography } from '@mui/material'
-import { CheckIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { Box, Button, FormControl, FormControlLabel, IconButton, InputBase, Paper, Popover, Radio, RadioGroup, TextField, Typography } from '@mui/material'
+import { CheckIcon, ChevronDownIcon, MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { getSubjectAreas, searchKeywords, type WorkerKeyword, type WorkerSubjectArea } from '../services/workerApi'
 
 type RecentProject = { name: string; subject: string; topics: string[] }
@@ -12,6 +12,9 @@ export function CreateProjectPage() {
   const [subjectLoading, setSubjectLoading] = useState(true)
   const [subjectError, setSubjectError] = useState('')
   const [subjectRequestVersion, setSubjectRequestVersion] = useState(0)
+  const [subjectPickerAnchor, setSubjectPickerAnchor] = useState<HTMLElement | null>(null)
+  const [subjectDraftId, setSubjectDraftId] = useState('')
+  const [subjectSearch, setSubjectSearch] = useState('')
   const [keywordQuery, setKeywordQuery] = useState('')
   const [suggestions, setSuggestions] = useState<WorkerKeyword[]>([])
   const [keywordRequestVersion, setKeywordRequestVersion] = useState(0)
@@ -25,6 +28,12 @@ export function CreateProjectPage() {
     () => subjectOptions.find((option) => option.id === subjectId)?.display_name ?? '',
     [subjectId, subjectOptions],
   )
+  const filteredSubjectOptions = useMemo(() => {
+    const query = subjectSearch.trim().toLocaleLowerCase()
+    return query
+      ? subjectOptions.filter((option) => option.display_name.toLocaleLowerCase().includes(query))
+      : subjectOptions
+  }, [subjectOptions, subjectSearch])
   const keywordSearch = keywordQuery.trim() || subject
   const keywordRequestKey = !subjectLoading && keywordSearch ? JSON.stringify([keywordSearch, keywordRequestVersion]) : ''
   const keywordError = keywordFailure?.key === keywordRequestKey ? keywordFailure.message : ''
@@ -95,6 +104,20 @@ export function CreateProjectPage() {
     setSubjectRequestVersion((version) => version + 1)
   }
 
+  const closeSubjectPicker = () => {
+    setSubjectPickerAnchor(null)
+    setSubjectSearch('')
+  }
+
+  const applySubjectSelection = () => {
+    if (subjectDraftId !== subjectId) {
+      setSubjectId(subjectDraftId)
+      setSelectedKeywords([])
+      setCreatedMessage('')
+    }
+    closeSubjectPicker()
+  }
+
   return <Box component="form" className="create-project-page" onSubmit={createProject}>
     <Box className="create-project-heading">
       <Box>
@@ -114,11 +137,70 @@ export function CreateProjectPage() {
               <TextField id="project-name" fullWidth size="small" value={projectName} onChange={(event) => { setProjectName(event.target.value); setCreatedMessage('') }} placeholder="Enter project name..." slotProps={{ htmlInput: { maxLength: 80 } }} />
             </Box>
             <Box className="project-field">
-              <label htmlFor="subject-area">Subject area <b>*</b></label>
+              <label id="subject-area-label">Subject area <b>*</b></label>
               <FormControl fullWidth size="small">
-                <Select id="subject-area" variant="outlined" value={subjectId} disabled={subjectLoading || !subjectOptions.length} onChange={(event) => { setSubjectId(event.target.value); setSelectedKeywords([]); setCreatedMessage('') }} inputProps={{ 'aria-label': 'Subject area' }}>
-                  {subjectOptions.map((option) => <MenuItem value={option.id} key={option.id}>{option.display_name}</MenuItem>)}
-                </Select>
+                <Button
+                  id="subject-area"
+                  type="button"
+                  variant="outlined"
+                  className="subject-area-trigger"
+                  disabled={subjectLoading || !subjectOptions.length}
+                  aria-labelledby="subject-area-label"
+                  aria-haspopup="dialog"
+                  aria-expanded={Boolean(subjectPickerAnchor)}
+                  onClick={(event) => {
+                    setSubjectDraftId(subjectId)
+                    setSubjectSearch('')
+                    setSubjectPickerAnchor(event.currentTarget)
+                  }}
+                >
+                  <span>{subject || 'Select subject area'}</span>
+                  <ChevronDownIcon width={16} height={16} aria-hidden="true" />
+                </Button>
+                <Popover
+                  open={Boolean(subjectPickerAnchor)}
+                  anchorEl={subjectPickerAnchor}
+                  onClose={closeSubjectPicker}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                  slotProps={{ paper: {
+                    className: 'subject-area-popover',
+                    role: 'dialog',
+                    'aria-label': 'Select subject area',
+                    style: { width: subjectPickerAnchor ? Math.min(subjectPickerAnchor.getBoundingClientRect().width, window.innerWidth - 24) : undefined },
+                  } }}
+                >
+                  <Box className="subject-area-search">
+                    <MagnifyingGlassIcon width={16} height={16} aria-hidden="true" />
+                    <InputBase
+                      autoFocus
+                      value={subjectSearch}
+                      onChange={(event) => setSubjectSearch(event.target.value)}
+                      placeholder="Search subject areas..."
+                      inputProps={{
+                        'aria-label': 'Search subject areas',
+                        onKeyDown: (event) => { if (event.key === 'Enter') event.preventDefault() },
+                      }}
+                    />
+                  </Box>
+                  <Box className="subject-area-options">
+                    {filteredSubjectOptions.length
+                      ? <RadioGroup aria-label="Subject areas" value={subjectDraftId} onChange={(event) => setSubjectDraftId(event.target.value)}>
+                        {filteredSubjectOptions.map((option) => <FormControlLabel
+                          className={`subject-area-option${subjectDraftId === option.id ? ' is-selected' : ''}`}
+                          key={option.id}
+                          value={option.id}
+                          control={<Radio size="small" />}
+                          label={option.display_name}
+                        />)}
+                      </RadioGroup>
+                      : <Typography className="subject-area-empty">No subject areas found.</Typography>}
+                  </Box>
+                  <Box className="filter-menu-actions">
+                    <Button type="button" onClick={closeSubjectPicker}>Cancel</Button>
+                    <Button type="button" variant="contained" disabled={!subjectDraftId} onClick={applySubjectSelection}>Apply</Button>
+                  </Box>
+                </Popover>
                 {subjectLoading && <Typography className="data-status" role="status">Loading subject areas...</Typography>}
                 {subjectError && <Typography className="data-status data-status-error" role="alert">{subjectError} <Button type="button" size="small" onClick={retrySubjects}>Retry</Button></Typography>}
                 {!subjectLoading && !subjectError && !subjectOptions.length && <Typography className="data-status">No subject areas are available.</Typography>}
