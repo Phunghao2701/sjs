@@ -185,12 +185,14 @@ function EntitySelect({ value, onChange }: { value: ResearchEntity; onChange: (v
   </FormControl>
 }
 
-function FilterMenu({ definition, options, selected, selectedLabels, selectedFilters, onApply, loading, error }: {
+function FilterMenu({ definition, options, selected, selectedLabels, selectedFilters, contextEntity, contextQuery, onApply, loading, error }: {
   definition: FilterDefinition
   options: FilterOption[]
   selected: string[]
   selectedLabels: Record<string, FilterOption>
   selectedFilters: Set<string>
+  contextEntity: ResearchEntity
+  contextQuery: string
   onApply: (key: string, values: string[], options: FilterOption[]) => void
   loading: boolean
   error: boolean
@@ -205,12 +207,22 @@ function FilterMenu({ definition, options, selected, selectedLabels, selectedFil
   const normalizedSearch = searchTerm.trim()
   const lookupFilterParams = useMemo<Record<string, string>>(() => {
     const filters: Record<string, string> = {}
-    if (definition.lookupEntity === 'institutions') {
-      const countryCodes = selectedValues(selectedFilters, 'country_code')
-      if (countryCodes.length > 0) filters.country_code = countryCodes.join('|')
+    if (definition.lookupEntity) {
+      const grouped = new Map<string, string[]>()
+      for (const selectedFilter of selectedFilters) {
+        const separator = selectedFilter.indexOf(':')
+        if (separator < 0) continue
+        const key = selectedFilter.slice(0, separator)
+        const value = selectedFilter.slice(separator + 1)
+        if (key === definition.key) continue
+        grouped.set(key, [...(grouped.get(key) ?? []), value])
+      }
+      for (const [key, values] of grouped) filters[key] = values.join('|')
+      filters.context_entity = contextEntity.toLowerCase()
+      filters.context_query = contextQuery
     }
     return filters
-  }, [definition.lookupEntity, selectedFilters])
+  }, [definition.lookupEntity, definition.key, selectedFilters, contextEntity, contextQuery])
   const pluralLabels: Record<string, string> = {
     country_code: 'countries',
     institution_id: 'institutions',
@@ -596,6 +608,8 @@ export function OverviewPage() {
             selected={selected}
             selectedLabels={filterOptionLabels}
             selectedFilters={selectedFilters}
+            contextEntity={entity}
+            contextQuery={submittedQuery}
             onApply={applyFilter}
             loading={filterGroupsLoading || (definition.key === 'country_code' && countriesLoading)}
             error={filterGroupsError || (definition.key === 'country_code' && countriesError)}
