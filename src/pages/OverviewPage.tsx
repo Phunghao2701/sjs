@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Box, Button, Checkbox, FormControl, IconButton, InputBase, MenuItem, Paper, Popover, Select, Tooltip, Typography } from '@mui/material'
-import { ArrowDownTrayIcon, BuildingOffice2Icon, ChevronDownIcon, DocumentTextIcon, EllipsisVerticalIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline'
+import { ArrowDownTrayIcon, BuildingOffice2Icon, ChevronDownIcon, DocumentTextIcon, EllipsisVerticalIcon, MagnifyingGlassIcon, UserIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import {
   getCountries,
   searchResearch,
@@ -77,7 +77,12 @@ function selectedValues(filters: Set<string>, key: string) {
   return [...filters].filter((item) => item.startsWith(prefix)).map((item) => item.slice(prefix.length))
 }
 
-function makeFilterGroups(entity: ResearchEntity, facets: Record<string, WorkerFacet[]>): FilterGroup[] {
+function makeFilterGroups(
+  entity: ResearchEntity,
+  facets: Record<string, WorkerFacet[]>,
+  selectedFilters: Set<string>,
+  selectedLabels: Record<string, FilterOption>,
+): FilterGroup[] {
   const definitions: Record<ResearchEntity, { title: string; key: string }[]> = {
     Authors: [
       { title: 'Exact Institution', key: 'institution_id' },
@@ -86,6 +91,7 @@ function makeFilterGroups(entity: ResearchEntity, facets: Record<string, WorkerF
     ],
     Works: [
       { title: 'Publication year', key: 'publication_year' },
+      { title: 'Exact Institution', key: 'institution_id' },
       { title: 'Work type', key: 'type' },
       { title: 'Open access', key: 'is_open_access' },
     ],
@@ -103,14 +109,22 @@ function makeFilterGroups(entity: ResearchEntity, facets: Record<string, WorkerF
 
   const optionLimit = definitions[entity].length > 3 ? 3 : 5
   return definitions[entity].map(({ title, key }) => {
-    const options = (facets[key] ?? []).map((option) => ({
+    const facetOptions = (facets[key] ?? []).map((option) => ({
       label: key === 'has_orcid' || key === 'is_open_access'
         ? option.value === 'true' ? 'Yes' : 'No'
         : key === 'type' ? titleCase(option.label) : option.label,
       value: option.value,
       count: formatCount(option.count),
-    })).slice(0, optionLimit)
-    if (key === 'publication_year') options.sort((left, right) => Number(right.value) - Number(left.value))
+    }))
+    if (key === 'publication_year') facetOptions.sort((left, right) => Number(right.value) - Number(left.value))
+    const selected = selectedValues(selectedFilters, key).map((value) => (
+      facetOptions.find((option) => option.value === value)
+      ?? selectedLabels[`${key}:${value}`]
+      ?? { label: value, value, count: '' }
+    ))
+    const selectedValuesSet = new Set(selected.map((option) => option.value))
+    const options = [...selected, ...facetOptions.filter((option) => !selectedValuesSet.has(option.value))]
+      .slice(0, Math.max(optionLimit, selected.length))
     return { title, key, options }
   })
 }
@@ -188,6 +202,19 @@ function FilterMenu({ definition, options, selected, selectedLabels, onApply, lo
   const [searchError, setSearchError] = useState(false)
   const open = Boolean(anchorEl)
   const normalizedSearch = searchTerm.trim()
+  const pluralLabels: Record<string, string> = {
+    country_code: 'countries',
+    institution_id: 'institutions',
+    publication_year: 'years',
+    has_orcid: 'ORCID options',
+    type: definition.label.toLowerCase().includes('institution') ? 'institution types' : 'types',
+    is_open_access: 'access options',
+    topic_id: 'topics',
+    publisher_id: 'publishers',
+  }
+  const selectionLabel = selected.length === 1
+    ? selectedLabels[`${definition.key}:${selected[0]}`]?.label ?? definition.label
+    : `${selected.length} ${pluralLabels[definition.key] ?? 'selected'}`
 
   useEffect(() => {
     if (!open || !definition.lookupEntity || !normalizedSearch) return
@@ -251,9 +278,21 @@ function FilterMenu({ definition, options, selected, selectedLabels, onApply, lo
       }}
       aria-haspopup="dialog"
       aria-expanded={open}
+      aria-label={selected.length ? `${selectionLabel}, edit filter` : definition.label}
     >
-      {definition.label}<ChevronDownIcon width={12} height={12} aria-hidden="true" />
+      <span className="quick-filter-summary">{selectionLabel}</span>
+      {selected.length === 0 && <ChevronDownIcon width={12} height={12} aria-hidden="true" />}
     </Button>
+    {selected.length > 0 && <IconButton
+      className="quick-filter-clear"
+      type="button"
+      aria-label={`Clear ${definition.label} filter`}
+      onClick={(event) => {
+        event.stopPropagation()
+        onApply(definition.key, [], [])
+        closeMenu()
+      }}
+    ><XMarkIcon width={14} height={14} aria-hidden="true" /></IconButton>}
     <Popover
       open={open}
       anchorEl={anchorEl}
@@ -375,7 +414,10 @@ export function OverviewPage() {
     value: country.zone_id,
     count: formatCount(countryCounts.get(country.zone_id) ?? 0),
   })), [countries, countryCounts])
-  const filterGroups = useMemo(() => makeFilterGroups(entity, visibleFacets), [entity, visibleFacets])
+  const filterGroups = useMemo(
+    () => makeFilterGroups(entity, visibleFacets, selectedFilters, filterOptionLabels),
+    [entity, visibleFacets, selectedFilters, filterOptionLabels],
+  )
   const requestKey = JSON.stringify({
     query: submittedQuery,
     requestVersion,
@@ -528,17 +570,20 @@ export function OverviewPage() {
         <Tooltip title="Search"><IconButton type="submit" aria-label="Search" className="query-submit-button"><MagnifyingGlassIcon width={18} height={18} /></IconButton></Tooltip>
       </Box>
       <Box className="quick-filters">
-        {quickFilterDefinitions[entity].map((definition) => <Box className="quick-filter-chip" key={entity + '-' + definition.key}>
+        {quickFilterDefinitions[entity].map((definition) => {
+          const selected = selectedValues(selectedFilters, definition.key)
+          return <Box className={`quick-filter-chip${selected.length ? ' is-selected' : ''}`} key={entity + '-' + definition.key}>
           <FilterMenu
             definition={definition}
             options={optionsFor(definition)}
-            selected={selectedValues(selectedFilters, definition.key)}
+            selected={selected}
             selectedLabels={filterOptionLabels}
             onApply={applyFilter}
             loading={filterGroupsLoading || (definition.key === 'country_code' && countriesLoading)}
             error={filterGroupsError || (definition.key === 'country_code' && countriesError)}
           />
-        </Box>)}
+        </Box>
+        })}
         <Button className="more-filters-button" type="button">More filters</Button>
       </Box>
     </Box>
