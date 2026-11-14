@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Box, Button, Checkbox, FormControl, IconButton, InputBase, MenuItem, Paper, Select, Tooltip, Typography } from '@mui/material'
 import { ArrowDownTrayIcon, BuildingOffice2Icon, DocumentTextIcon, EllipsisVerticalIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline'
 import {
@@ -9,6 +9,7 @@ import {
   type ResearchSearchParams,
   type WorkerAuthor,
   type WorkerCountry,
+  type WorkerFacet,
   type WorkerInstitution,
   type WorkerWork,
 } from '../services/workerApi'
@@ -22,9 +23,12 @@ type RecordItem = {
   countLabel: string
 }
 
-type FilterOption = { label: string; value: string; count?: string }
+type FilterOption = { label: string; value: string; count: string }
 type FilterGroup = { title: string; key: string; options: FilterOption[] }
 type QuickFilterOption = { label: string; value: string }
+type FacetState = { key: string; facets: Record<string, WorkerFacet[]> }
+
+const emptyFacets: Record<string, WorkerFacet[]> = {}
 
 const entityIcons = { Authors: UserIcon, Works: DocumentTextIcon, Institutions: BuildingOffice2Icon }
 const defaultSort: Record<ResearchEntity, string> = {
@@ -37,6 +41,10 @@ function formatCount(value: number) {
   return Number(value || 0).toLocaleString('en-US')
 }
 
+function titleCase(value: string) {
+  return value.split(/[\s_-]+/).filter(Boolean).map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`).join(' ')
+}
+
 function selectedValues(filters: Set<string>, key: string) {
   const prefix = `${key}:`
   return [...filters].filter((item) => item.startsWith(prefix)).map((item) => item.slice(prefix.length))
@@ -46,43 +54,35 @@ function mergeFilterValues(...values: (string | undefined)[]) {
   return [...new Set(values.flatMap((value) => value ? value.split('|').filter(Boolean) : []))].join('|') || undefined
 }
 
-function makeFilterGroups(entity: ResearchEntity, institutions: WorkerInstitution[], countries: WorkerCountry[]): FilterGroup[] {
-  const countryOptions = countries.slice(0, 5).map((country) => ({ label: country.name, value: country.zone_id }))
-  const institutionOptions = institutions.slice(0, 5).map((institution) => ({
-    label: institution.name,
-    value: institution.id,
-    count: formatCount(institution.works_count),
-  }))
-
-  if (entity === 'Authors') return [
-    { title: 'Exact Institution', key: 'institution_id', options: institutionOptions },
-    { title: 'Institution Country', key: 'country_code', options: countryOptions },
-    { title: 'Has ORCID', key: 'has_orcid', options: [{ label: 'Yes', value: 'true' }] },
-  ]
-
-  if (entity === 'Works') {
-    const year = new Date().getFullYear()
-    return [
-      { title: 'Publication year', key: 'publication_year', options: Array.from({ length: 5 }, (_, index) => ({ label: String(year - index), value: String(year - index) })) },
-      { title: 'Work type', key: 'type', options: [
-        { label: 'Article', value: 'article' },
-        { label: 'Review', value: 'review' },
-        { label: 'Book chapter', value: 'book-chapter' },
-        { label: 'Proceedings', value: 'proceedings-article' },
-      ] },
-      { title: 'Open access', key: 'is_open_access', options: [{ label: 'Yes', value: 'true' }] },
-    ]
+function makeFilterGroups(entity: ResearchEntity, facets: Record<string, WorkerFacet[]>): FilterGroup[] {
+  const definitions: Record<ResearchEntity, { title: string; key: string }[]> = {
+    Authors: [
+      { title: 'Exact Institution', key: 'institution_id' },
+      { title: 'Institution Country', key: 'country_code' },
+      { title: 'Has ORCID', key: 'has_orcid' },
+    ],
+    Works: [
+      { title: 'Publication year', key: 'publication_year' },
+      { title: 'Work type', key: 'type' },
+      { title: 'Open access', key: 'is_open_access' },
+    ],
+    Institutions: [
+      { title: 'Institution Country', key: 'country_code' },
+      { title: 'Institution type', key: 'type' },
+    ],
   }
 
-  return [
-    { title: 'Institution Country', key: 'country_code', options: countryOptions },
-    { title: 'Institution type', key: 'type', options: [
-      { label: 'Education', value: 'education' },
-      { label: 'Healthcare', value: 'healthcare' },
-      { label: 'Government', value: 'government' },
-      { label: 'Company', value: 'company' },
-    ] },
-  ]
+  return definitions[entity].map(({ title, key }) => {
+    const options = (facets[key] ?? []).map((option) => ({
+      label: key === 'has_orcid' || key === 'is_open_access'
+        ? option.value === 'true' ? 'Yes' : 'No'
+        : key === 'type' ? titleCase(option.label) : option.label,
+      value: option.value,
+      count: formatCount(option.count),
+    }))
+    if (key === 'publication_year') options.sort((left, right) => Number(right.value) - Number(left.value))
+    return { title, key, options }
+  })
 }
 
 function mapAuthors(authors: WorkerAuthor[]): RecordItem[] {
@@ -157,10 +157,12 @@ function QuickFilter({ value, label, options, onChange, disabled }: {
   </Box>
 }
 
-function FilterCard({ group, selected, onToggle }: {
+function FilterCard({ group, selected, onToggle, loading, error }: {
   group: FilterGroup
   selected: Set<string>
   onToggle: (key: string, value: string) => void
+  loading: boolean
+  error: boolean
 }) {
   return <Paper variant="outlined" className="filter-card">
     <Box className="filter-card-title-row">
@@ -171,12 +173,15 @@ function FilterCard({ group, selected, onToggle }: {
     </Box>
     <Box className="filter-card-divider" />
     <Box className="filter-options">
-      {group.options.map((option) => {
+      {loading ? <Typography className="filter-status">Loading filters...</Typography>
+        : error ? <Typography className="filter-status" role="status">Filters unavailable.</Typography>
+          : group.options.length === 0 ? <Typography className="filter-status">No options for this search.</Typography>
+            : group.options.map((option) => {
         const key = `${group.key}:${option.value}`
         return <label className="filter-option" key={key}>
           <Checkbox size="small" checked={selected.has(key)} onChange={() => onToggle(group.key, option.value)} slotProps={{ input: { 'aria-label': option.label } }} sx={{ p: 0, color: '#727a83', '&.Mui-checked': { color: '#0879c9' } }} />
           <span className="filter-option-label">{option.label}</span>
-          {option.count && <span className="filter-option-count">{option.count}</span>}
+          <span className="filter-option-count">{option.count}</span>
         </label>
       })}
     </Box>
@@ -209,11 +214,15 @@ export function OverviewPage() {
   const [searchFailure, setSearchFailure] = useState<{ key: string; message: string } | null>(null)
   const [countries, setCountries] = useState<WorkerCountry[]>([])
   const [institutions, setInstitutions] = useState<WorkerInstitution[]>([])
-  const [filterOptionsLoading, setFilterOptionsLoading] = useState(true)
+  const [catalogOptionsLoading, setCatalogOptionsLoading] = useState(true)
+  const [facetState, setFacetState] = useState<FacetState>({ key: '', facets: emptyFacets })
+  const facetCache = useRef<FacetState | null>(null)
 
   const countryOptions = useMemo(() => countries.map((item) => ({ label: item.name, value: item.zone_id })), [countries])
   const institutionOptions = useMemo(() => institutions.map((item) => ({ label: item.name, value: item.id })), [institutions])
-  const filterGroups = useMemo(() => makeFilterGroups(entity, institutions, countries), [entity, institutions, countries])
+  const facetKey = JSON.stringify([entity, submittedQuery])
+  const visibleFacets = facetState.key === facetKey ? facetState.facets : emptyFacets
+  const filterGroups = useMemo(() => makeFilterGroups(entity, visibleFacets), [entity, visibleFacets])
   const requestKey = JSON.stringify({
     query: submittedQuery,
     requestVersion,
@@ -226,6 +235,7 @@ export function OverviewPage() {
   })
   const searchError = searchFailure?.key === requestKey ? searchFailure.message : ''
   const loading = Boolean(submittedQuery) && completedRequestKey !== requestKey && !searchError
+  const filterGroupsLoading = Boolean(submittedQuery) && facetState.key !== facetKey && !searchError
   const sortOptions = entity === 'Works'
     ? [{ value: 'cited_by_count', label: 'Most citations' }, { value: 'publication_year', label: 'Most recent' }, { value: 'title', label: 'Title' }]
     : [{ value: 'works_count', label: 'Most works' }, { value: 'cited_by_count', label: 'Most citations' }]
@@ -243,13 +253,14 @@ export function OverviewPage() {
           setInstitutions([])
         }
       })
-      .finally(() => { if (!controller.signal.aborted) setFilterOptionsLoading(false) })
+      .finally(() => { if (!controller.signal.aborted) setCatalogOptionsLoading(false) })
     return () => controller.abort()
   }, [])
 
   useEffect(() => {
     if (!submittedQuery) return
     const controller = new AbortController()
+    const cachedFacets = facetCache.current?.key === facetKey
     const institutionFilter = entity === 'Institutions' ? undefined : mergeFilterValues(institution, selectedValues(selectedFilters, 'institution_id').join('|'))
     const countryFilter = mergeFilterValues(country, selectedValues(selectedFilters, 'country_code').join('|'))
     const params: ResearchSearchParams = {
@@ -264,6 +275,7 @@ export function OverviewPage() {
       publication_year: entity === 'Works' ? selectedValues(selectedFilters, 'publication_year').join('|') : undefined,
       type: entity === 'Institutions' || entity === 'Works' ? selectedValues(selectedFilters, 'type').join('|') : undefined,
       is_open_access: entity === 'Works' ? selectedValues(selectedFilters, 'is_open_access').join('|') : undefined,
+      include_facets: cachedFacets ? 0 : 1,
     }
 
     searchResearch(entity, params, controller.signal)
@@ -272,6 +284,11 @@ export function OverviewPage() {
         if (entity === 'Authors') setRecords(mapAuthors(result.items as WorkerAuthor[]))
         else if (entity === 'Works') setRecords(mapWorks(result.items as WorkerWork[]))
         else setRecords(mapInstitutions(result.items as WorkerInstitution[], countries))
+        if (!cachedFacets) {
+          const nextFacetState = { key: facetKey, facets: result.facets ?? emptyFacets }
+          facetCache.current = nextFacetState
+          setFacetState(nextFacetState)
+        }
         setTotal(result.total)
         setCompletedRequestKey(requestKey)
       })
@@ -279,7 +296,7 @@ export function OverviewPage() {
         if (!controller.signal.aborted) setSearchFailure({ key: requestKey, message: error instanceof Error ? error.message : 'Unable to load search results.' })
       })
     return () => controller.abort()
-  }, [submittedQuery, requestVersion, entity, sortBy, institution, country, selectedFilters, countries, requestKey])
+  }, [submittedQuery, requestVersion, entity, sortBy, institution, country, selectedFilters, countries, requestKey, facetKey])
 
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -317,8 +334,8 @@ export function OverviewPage() {
         <Tooltip title="Search"><IconButton type="submit" aria-label="Search" className="query-submit-button"><MagnifyingGlassIcon width={18} height={18} /></IconButton></Tooltip>
       </Box>
       <Box className="quick-filters">
-        <QuickFilter value={institution} onChange={setInstitution} label="Institution" options={institutionOptions} disabled={filterOptionsLoading || entity === 'Institutions'} />
-        <QuickFilter value={country} onChange={setCountry} label="Country" options={countryOptions} disabled={filterOptionsLoading} />
+        <QuickFilter value={institution} onChange={setInstitution} label="Institution" options={institutionOptions} disabled={catalogOptionsLoading || entity === 'Institutions'} />
+        <QuickFilter value={country} onChange={setCountry} label="Country" options={countryOptions} disabled={catalogOptionsLoading} />
         <Button className="more-filters-button" type="button">More filters</Button>
       </Box>
     </Box>
@@ -330,7 +347,7 @@ export function OverviewPage() {
       <Box className="suggested-entities">{(['Authors', 'Works', 'Institutions'] as ResearchEntity[]).map((item) => { const Icon = entityIcons[item]; return <Button key={item} variant="outlined" onClick={() => changeEntity(item)} className="entity-suggestion"><Icon width={16} height={16} aria-hidden="true" />{item}</Button> })}</Box>
       <Typography className="search-empty-footnote">Your results and filters will appear here after searching.</Typography>
     </Paper> : <Box className="results-workspace">
-      <Box className="filter-column">{filterGroups.map((group) => <FilterCard group={group} key={group.title} selected={selectedFilters} onToggle={toggleFilter} />)}</Box>
+      <Box className="filter-column">{filterGroups.map((group) => <FilterCard group={group} key={group.title} selected={selectedFilters} onToggle={toggleFilter} loading={filterGroupsLoading} error={Boolean(searchError) && facetState.key !== facetKey} />)}</Box>
       <Paper variant="outlined" className="results-panel">
         <Box className="results-toolbar">
           <Box className="results-heading"><Typography component="h2">{entity} results</Typography><Typography className="results-sample">{loading ? 'Loading' : searchError ? 'Unavailable' : `\u00b7 Sample ${showingCount ? `1\u2013${showingCount}` : '0'}`}</Typography></Box>

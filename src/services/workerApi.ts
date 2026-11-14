@@ -17,6 +17,12 @@ export type WorkerListResponse<T> = {
   total?: number
 }
 
+export type WorkerFacet = {
+  value: string
+  label: string
+  count: number
+}
+
 export type WorkerAuthor = {
   id: string
   author_id: string
@@ -88,6 +94,7 @@ export type ResearchSearchParams = {
   publication_year?: string
   type?: string
   is_open_access?: string
+  include_facets?: number
 }
 
 type WorkerEnvelope<T> = {
@@ -95,6 +102,7 @@ type WorkerEnvelope<T> = {
   data?: T
   pagination?: ApiPagination
   total?: number
+  facets?: Record<string, WorkerFacet[]>
 } & WorkerErrorPayload
 
 function apiUrl(path: string, params: Record<string, string | number | undefined> = {}) {
@@ -134,7 +142,12 @@ export async function searchResearch(entity: ResearchEntity, params: ResearchSea
     { ...params, entity: entity.toLowerCase() },
     signal,
   )
-  return { items: unwrap(response), pagination: response.pagination, total: response.total ?? response.pagination?.total ?? 0 }
+  return {
+    items: unwrap(response),
+    pagination: response.pagination,
+    total: response.total ?? response.pagination?.total ?? 0,
+    facets: response.facets ?? {},
+  }
 }
 
 export async function getInstitutionOptions(signal?: AbortSignal) {
