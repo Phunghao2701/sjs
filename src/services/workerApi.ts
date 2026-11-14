@@ -23,6 +23,22 @@ export type WorkerFacet = {
   count: number
 }
 
+export type WorkerOverviewBucket = {
+  label: string
+  count: number
+}
+
+export type WorkerProjectOverview = {
+  total_works: number
+  years: { year: number; count: number }[]
+  source_types: WorkerOverviewBucket[]
+  subject_areas: WorkerOverviewBucket[]
+  journal_count: number
+  journal_count_complete: boolean
+  growth_rate: number | null
+  updated_at: string
+}
+
 export type WorkerAuthor = {
   id: string
   author_id: string
@@ -174,6 +190,15 @@ export async function searchResearch(entity: ResearchEntity, params: ResearchSea
     total: response.total ?? response.pagination?.total ?? 0,
     facets: response.facets ?? {},
   }
+}
+
+export async function getProjectOverview(query: string, signal?: AbortSignal) {
+  const response = await getJson<WorkerEnvelope<WorkerProjectOverview>>(
+    '/api/v1/projects/overview',
+    { query },
+    signal,
+  )
+  return unwrap(response)
 }
 
 export async function searchFilterValues(entity: FilterValueEntity, query: string, filters: Record<string, string> = {}, signal?: AbortSignal) {

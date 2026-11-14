@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Box, Button, Checkbox, FormControl, IconButton, InputBase, MenuItem, Paper, Popover, Select, Tooltip, Typography } from '@mui/material'
-import { ArrowDownTrayIcon, BuildingOffice2Icon, ChevronDownIcon, DocumentTextIcon, EllipsisVerticalIcon, MagnifyingGlassIcon, UserIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { Box, Button, Checkbox, FormControl, IconButton, InputBase, MenuItem, Pagination, Paper, Popover, Select, Tooltip, Typography } from '@mui/material'
+import { ArrowDownTrayIcon, BuildingOffice2Icon, CheckIcon, ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, EllipsisVerticalIcon, MagnifyingGlassIcon, UserIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import {
   getCountries,
   searchResearch,
@@ -27,7 +27,7 @@ type RecordItem = {
 }
 
 type FilterOption = { label: string; value: string; count: string }
-type FilterGroup = { title: string; key: string; options: FilterOption[] }
+type FilterGroup = { title: string; key: string; options: FilterOption[]; allOptions: FilterOption[] }
 type FilterDefinition = { title: string; label: string; key: string; lookupEntity?: FilterValueEntity; searchPlaceholder?: string }
 type FacetState = { key: string; facets: Record<string, WorkerFacet[]> }
 
@@ -40,6 +40,7 @@ const defaultSort: Record<ResearchEntity, string> = {
   Institutions: 'works_count',
   Sources: 'works_count',
 }
+const resultPageSizes = [10, 20, 50, 100]
 
 const quickFilterDefinitions: Record<ResearchEntity, FilterDefinition[]> = {
   Authors: [
@@ -107,7 +108,7 @@ function makeFilterGroups(
     ],
   }
 
-  const optionLimit = definitions[entity].length > 3 ? 3 : 5
+  const optionLimit = definitions[entity].length > 3 ? 3 : 4
   return definitions[entity].map(({ title, key }) => {
     const facetOptions = (facets[key] ?? []).map((option) => ({
       label: key === 'has_orcid' || key === 'is_open_access'
@@ -123,9 +124,9 @@ function makeFilterGroups(
       ?? { label: value, value, count: '' }
     ))
     const selectedValuesSet = new Set(selected.map((option) => option.value))
-    const options = [...selected, ...facetOptions.filter((option) => !selectedValuesSet.has(option.value))]
-      .slice(0, Math.max(optionLimit, selected.length))
-    return { title, key, options }
+    const allOptions = [...selected, ...facetOptions.filter((option) => !selectedValuesSet.has(option.value))]
+    const options = allOptions.slice(0, optionLimit)
+    return { title, key, options, allOptions }
   })
 }
 
@@ -368,13 +369,24 @@ function FilterMenu({ definition, options, selected, selectedLabels, selectedFil
     </Popover>
   </>
 }
-function FilterCard({ group, selected, onToggle, loading, error }: {
+function FilterCard({ group, selected, onToggle, onApply, loading, error }: {
   group: FilterGroup
   selected: Set<string>
   onToggle: (key: string, value: string, option?: FilterOption) => void
+  onApply: (key: string, values: string[], options: FilterOption[]) => void
   loading: boolean
   error: boolean
 }) {
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+  const [draftValues, setDraftValues] = useState<Set<string>>(new Set())
+  const [searchTerm, setSearchTerm] = useState('')
+  const open = Boolean(anchorEl)
+  const visibleMoreOptions = group.allOptions.filter((option) => option.label.toLocaleLowerCase().includes(searchTerm.trim().toLocaleLowerCase()))
+  const closeMore = () => {
+    setAnchorEl(null)
+    setSearchTerm('')
+  }
+
   return <Paper variant="outlined" className="filter-card">
     <Box className="filter-card-title-row">
       <Typography component="h3">{group.title}</Typography>
@@ -396,6 +408,59 @@ function FilterCard({ group, selected, onToggle, loading, error }: {
         </label>
       })}
     </Box>
+    {!loading && !error && group.allOptions.length > group.options.length && <Button
+      className="filter-card-more"
+      type="button"
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      onClick={(event) => {
+        setDraftValues(new Set(selectedValues(selected, group.key)))
+        setSearchTerm('')
+        setAnchorEl(event.currentTarget)
+      }}
+    >More...</Button>}
+    <Popover
+      open={open}
+      anchorEl={anchorEl}
+      onClose={closeMore}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      slotProps={{ paper: { className: 'filter-menu-paper filter-menu-paper-searchable', role: 'dialog', 'aria-label': `More ${group.title} filters` } }}
+    >
+      <Box className="filter-menu-search">
+        <MagnifyingGlassIcon width={15} height={15} aria-hidden="true" />
+        <InputBase
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder={group.title}
+          inputProps={{ 'aria-label': `Search ${group.title.toLowerCase()} values` }}
+          autoFocus
+        />
+      </Box>
+      <Box className="filter-menu-options">
+        {visibleMoreOptions.length === 0 ? <Typography className="filter-menu-status">No options found.</Typography>
+          : visibleMoreOptions.map((option) => <label className="filter-menu-option" key={option.value}>
+            <Checkbox
+              size="small"
+              checked={draftValues.has(option.value)}
+              onChange={() => setDraftValues((current) => {
+                const next = new Set(current)
+                if (next.has(option.value)) next.delete(option.value)
+                else next.add(option.value)
+                return next
+              })}
+              slotProps={{ input: { 'aria-label': option.label } }}
+              sx={{ p: 0, color: '#727a83', '&.Mui-checked': { color: '#0879c9' } }}
+            />
+            <span className="filter-menu-option-label" title={option.label}>{option.label}</span>
+            <span className="filter-menu-option-count">{option.count}</span>
+          </label>)}
+      </Box>
+      <Box className="filter-menu-actions">
+        <Button type="button" onClick={closeMore}>Cancel</Button>
+        <Button type="button" variant="contained" onClick={() => { onApply(group.key, [...draftValues], group.allOptions); closeMore() }}>Apply</Button>
+      </Box>
+    </Popover>
   </Paper>
 }
 
@@ -417,6 +482,10 @@ export function OverviewPage() {
   const [hasSearched, setHasSearched] = useState(false)
   const [requestVersion, setRequestVersion] = useState(0)
   const [sortBy, setSortBy] = useState(defaultSort.Authors)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [resultMenuAnchor, setResultMenuAnchor] = useState<HTMLElement | null>(null)
+  const [pageSizeMenuAnchor, setPageSizeMenuAnchor] = useState<HTMLElement | null>(null)
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
   const [filterOptionLabels, setFilterOptionLabels] = useState<Record<string, FilterOption>>({})
   const [records, setRecords] = useState<RecordItem[]>([])
@@ -452,6 +521,8 @@ export function OverviewPage() {
     requestVersion,
     entity,
     sortBy,
+    currentPage,
+    pageSize,
     filters: [...selectedFilters].sort(),
     countries: countries.map(({ zone_id, name }) => [zone_id, name]),
   })
@@ -490,8 +561,8 @@ export function OverviewPage() {
     const cachedFacets = facetCache.current?.key === facetKey
     const params: ResearchSearchParams = {
       query: submittedQuery,
-      page: 1,
-      limit: 5,
+      page: currentPage,
+      limit: pageSize,
       sortBy,
       sortOrder: 'desc',
       institution_id: entity === 'Authors' || entity === 'Works' ? selectedValues(selectedFilters, 'institution_id').join('|') : undefined,
@@ -524,12 +595,13 @@ export function OverviewPage() {
         if (!controller.signal.aborted) setSearchFailure({ key: requestKey, message: error instanceof Error ? error.message : 'Unable to load search results.' })
       })
     return () => controller.abort()
-  }, [countriesLoading, submittedQuery, requestVersion, entity, sortBy, selectedFilters, countries, requestKey, facetKey])
+  }, [countriesLoading, submittedQuery, requestVersion, entity, sortBy, currentPage, pageSize, selectedFilters, countries, requestKey, facetKey])
 
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const trimmedQuery = query.trim()
     if (!trimmedQuery && selectedFilters.size === 0) return
+    setCurrentPage(1)
     setSubmittedQuery(trimmedQuery)
     setHasSearched(true)
     setRequestVersion((version) => version + 1)
@@ -541,6 +613,7 @@ export function OverviewPage() {
     const cachedFacets = facetCache.current?.key === nextFacetKey ? facetCache.current : null
     setEntity(nextEntity)
     setSortBy(defaultSort[nextEntity])
+    setCurrentPage(1)
     setSelectedFilters(new Set())
     setFilterOptionLabels({})
     setHasSearched(Boolean(submittedQuery))
@@ -556,6 +629,7 @@ export function OverviewPage() {
   }
 
   const applyFilter = (key: string, values: string[], options: FilterOption[]) => {
+    setCurrentPage(1)
     setSelectedFilters((current) => {
       const next = new Set([...current].filter((item) => !item.startsWith(key + ':')))
       for (const value of values) next.add(key + ':' + value)
@@ -566,6 +640,7 @@ export function OverviewPage() {
   }
 
   const toggleFilter = (key: string, value: string, option?: FilterOption) => {
+    setCurrentPage(1)
     setSelectedFilters((current) => {
       const next = new Set(current)
       const item = key + ':' + value
@@ -587,9 +662,11 @@ export function OverviewPage() {
   }
 
   const EntityIcon = entityIcons[entity]
-  const showingCount = Math.min(5, total || records.length)
+  const showingStart = records.length ? (currentPage - 1) * pageSize + 1 : 0
+  const showingEnd = records.length ? Math.min(total, (currentPage - 1) * pageSize + records.length) : 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
-  return <Box className={'overview-page' + (showResults ? ' has-results' : '')}>
+  return <Box className="overview-page">
     <Box className="overview-controls">
       <Box className="search-page-heading"><Typography component="h1">Time to search something great.</Typography></Box>
       <Box component="form" className="research-search" onSubmit={submitSearch}>
@@ -628,23 +705,75 @@ export function OverviewPage() {
       <Typography className="search-empty-footnote">Your results and filters will appear here after searching.</Typography>
     </Paper> : <Box className="results-workspace">
       <Box className="filter-column" style={{ gridTemplateRows: 'repeat(' + filterGroups.length + ', minmax(0, 1fr))' }}>
-        {filterGroups.map((group) => <FilterCard group={group} key={group.title} selected={selectedFilters} onToggle={toggleFilter} loading={filterGroupsLoading} error={filterGroupsError} />)}
+        {filterGroups.map((group) => <FilterCard group={group} key={group.title} selected={selectedFilters} onToggle={toggleFilter} onApply={applyFilter} loading={filterGroupsLoading} error={filterGroupsError} />)}
       </Box>
       <Paper variant="outlined" className="results-panel">
         <Box className="results-toolbar">
-          <Box className="results-heading"><Typography component="h2">{entity} results</Typography><Typography className="results-sample">{loading ? 'Loading' : searchError ? 'Unavailable' : '· Sample ' + (showingCount ? '1–' + showingCount : '0')}</Typography></Box>
+          <Box className="results-heading"><Typography component="h2">{entity} results</Typography><Typography className="results-sample">{loading ? 'Loading' : searchError ? 'Unavailable' : '· Sample ' + (records.length ? `${showingStart}–${showingEnd}` : '0')}</Typography></Box>
           <span className="toolbar-spacer" />
-          <Select value={sortBy} onChange={(event) => setSortBy(event.target.value)} input={<InputBase />} inputProps={{ 'aria-label': 'Sort results' }} className="sort-select">
+          <Select value={sortBy} onChange={(event) => { setSortBy(event.target.value); setCurrentPage(1) }} input={<InputBase />} inputProps={{ 'aria-label': 'Sort results' }} className="sort-select">
             {sortOptions.map((option) => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}
           </Select>
           <Tooltip title="Download results"><span><IconButton onClick={() => exportCsv(records, entity)} aria-label="Download results" size="small" className="quiet-icon-button" disabled={!records.length}><ArrowDownTrayIcon width={17} height={17} /></IconButton></span></Tooltip>
-          <Tooltip title="More options"><IconButton aria-label="More result options" size="small" className="quiet-icon-button"><EllipsisVerticalIcon width={17} height={17} /></IconButton></Tooltip>
+          <Tooltip title="More options"><IconButton onClick={(event) => { setPageSizeMenuAnchor(null); setResultMenuAnchor(event.currentTarget) }} aria-label="More result options" aria-haspopup="menu" aria-expanded={Boolean(resultMenuAnchor)} size="small" className="quiet-icon-button"><EllipsisVerticalIcon width={17} height={17} /></IconButton></Tooltip>
         </Box>
+        <Popover
+          open={Boolean(resultMenuAnchor)}
+          anchorEl={resultMenuAnchor}
+          onClose={() => { setResultMenuAnchor(null); setPageSizeMenuAnchor(null) }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          slotProps={{ paper: { className: 'results-options-popover', role: 'menu', 'aria-label': 'Result options' } }}
+        >
+          <Button
+            type="button"
+            role="menuitem"
+            aria-haspopup="menu"
+            aria-expanded={Boolean(pageSizeMenuAnchor)}
+            className="results-page-size-trigger"
+            onClick={(event) => setPageSizeMenuAnchor(event.currentTarget)}
+          >
+            <span>Page size</span>
+            <span className="results-page-size-current">{pageSize}</span>
+            <ChevronRightIcon width={15} height={15} aria-hidden="true" />
+          </Button>
+        </Popover>
+        <Popover
+          open={Boolean(pageSizeMenuAnchor)}
+          anchorEl={pageSizeMenuAnchor}
+          onClose={() => setPageSizeMenuAnchor(null)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          slotProps={{ paper: { className: 'results-page-size-popover', role: 'menu', 'aria-label': 'Page size' } }}
+        >
+          {resultPageSizes.map((size) => <Button
+            key={size}
+            type="button"
+            role="menuitemradio"
+            aria-checked={pageSize === size}
+            className="results-page-size-option"
+            onClick={() => {
+              setPageSize(size)
+              setCurrentPage(1)
+              setPageSizeMenuAnchor(null)
+              setResultMenuAnchor(null)
+            }}
+          >
+            <span className="results-page-size-check">{pageSize === size && <CheckIcon width={16} height={16} aria-hidden="true" />}</span>
+            <span>{size}</span>
+          </Button>)}
+        </Popover>
         <Box className="results-divider" />
-        {loading ? <Box className="results-status" role="status"><Typography>Loading results from OpenAlex...</Typography></Box>
-          : searchError ? <Box className="results-status" role="alert"><Typography>{searchError}</Typography><Button size="small" onClick={() => setRequestVersion((version) => version + 1)}>Retry</Button></Box>
-            : records.length === 0 ? <Box className="results-status"><Typography>No results found. Try another query or filter.</Typography></Box>
-              : records.map((record) => <Box className="result-row" key={record.id}><Box className="result-avatar"><EntityIcon width={19} height={19} aria-hidden="true" /></Box><Box className="result-copy"><Typography component="h3">{record.title}</Typography><Typography className="result-organization">{record.organization}</Typography><Typography className="result-description">{record.description}</Typography></Box><Box className="result-count"><Typography>{record.count}</Typography><Typography>{record.countLabel}</Typography></Box></Box>)}
+        <Box className="results-scroll" aria-label="Search results">
+          {loading ? <Box className="results-status" role="status"><Typography>Loading results from OpenAlex...</Typography></Box>
+            : searchError ? <Box className="results-status" role="alert"><Typography>{searchError}</Typography><Button size="small" onClick={() => setRequestVersion((version) => version + 1)}>Retry</Button></Box>
+              : records.length === 0 ? <Box className="results-status"><Typography>No results found. Try another query or filter.</Typography></Box>
+                : records.map((record) => <Box className="result-row" key={record.id}><Box className="result-avatar"><EntityIcon width={19} height={19} aria-hidden="true" /></Box><Box className="result-copy"><Typography component="h3">{record.title}</Typography><Typography className="result-organization">{record.organization}</Typography><Typography className="result-description">{record.description}</Typography></Box><Box className="result-count"><Typography>{record.count}</Typography><Typography>{record.countLabel}</Typography></Box></Box>)}
+        </Box>
+        {!loading && !searchError && records.length > 0 && <Box className="results-footer">
+          <Typography component="p">Showing {showingStart}–{showingEnd} of {total.toLocaleString('en-US')}</Typography>
+          <Pagination count={totalPages} page={currentPage} onChange={(_, nextPage) => setCurrentPage(nextPage)} size="small" siblingCount={0} boundaryCount={1} aria-label="Results pages" />
+        </Box>}
       </Paper>
     </Box>}
   </Box>

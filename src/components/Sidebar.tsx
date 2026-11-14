@@ -15,14 +15,27 @@ import {
   Squares2X2Icon,
 } from '@heroicons/react/24/outline'
 import type { AppPage } from '../App'
+import type { LocalProject, ProjectTab } from '../types/project'
 
 type SidebarProps = {
   activePage: AppPage
+  activeProject: LocalProject | null
+  projects: LocalProject[]
+  projectTab: ProjectTab
   onNavigate: (page: AppPage) => void
+  onProjectOpen: (project: LocalProject, tab: ProjectTab) => void
 }
 
-export function Sidebar({ activePage, onNavigate }: SidebarProps) {
+const projectSections: { label: string; value: ProjectTab }[] = [
+  { label: 'Overview', value: 'overview' },
+  { label: 'News Feed', value: 'news-feed' },
+  { label: 'Keywords & Monitoring', value: 'keywords-monitoring' },
+  { label: 'Members', value: 'members' },
+]
+
+export function Sidebar({ activePage, activeProject, projects, projectTab, onNavigate, onProjectOpen }: SidebarProps) {
   const [projectOpen, setProjectOpen] = useState(() => !window.matchMedia('(max-width: 620px)').matches)
+  const projectPageActive = activePage === 'project-detail'
 
   return (
     <Box component="aside" className="sidebar">
@@ -56,14 +69,14 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
 
         <Box className="nav-group-wrap">
           <ButtonBase
-            className={`nav-item nav-group-toggle${activePage === 'create-project' ? ' has-active-child' : ''}`}
+            className={`nav-item nav-group-toggle${activePage === 'create-project' || projectPageActive ? ' has-active-child' : ''}`}
             onClick={() => setProjectOpen((open) => !open)}
             aria-expanded={projectOpen}
             aria-controls="project-navigation"
-            aria-label="Project"
+            aria-label="Projects"
           >
             <FolderIcon className="nav-icon" aria-hidden="true" />
-            <span>Project</span>
+            <span>Projects</span>
             <span className="nav-spacer" />
             {projectOpen ? <ChevronDownIcon className="nav-chevron" aria-hidden="true" /> : <ChevronRightIcon className="nav-chevron" aria-hidden="true" />}
           </ButtonBase>
@@ -79,6 +92,27 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
             >
               Create Project
             </ButtonBase>
+
+            {projects.map((project) => <Box key={project.id}>
+              <ButtonBase
+                className={`nested-nav-link nested-nav-project${activeProject?.id === project.id && projectPageActive ? ' is-active' : ''}`}
+                onClick={() => onProjectOpen(project, 'overview')}
+                aria-current={activeProject?.id === project.id && projectPageActive && projectTab === 'overview' ? 'page' : undefined}
+                title={project.name}
+              >
+                <span>{project.name}</span>
+              </ButtonBase>
+              {activeProject?.id === project.id && projectPageActive && <Box className="project-detail-nav" aria-label={`${project.name} sections`}>
+                {projectSections.map((section) => <ButtonBase
+                  key={section.value}
+                  className={`project-detail-link${projectTab === section.value ? ' is-active' : ''}`}
+                  onClick={() => onProjectOpen(project, section.value)}
+                  aria-current={projectTab === section.value ? 'page' : undefined}
+                >
+                  {section.label}
+                </ButtonBase>)}
+              </Box>}
+            </Box>)}
           </Box>}
         </Box>
       </Box>

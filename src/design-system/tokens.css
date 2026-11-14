@@ -1,0 +1,71 @@
+:root {
+  /* Primitive colors */
+  --gray-950: #171a1e;
+  --gray-800: #252a2f;
+  --gray-700: #343a40;
+  --gray-600: #626972;
+  --gray-500: #69717a;
+  --gray-400: #969da6;
+  --gray-300: #e2e5e9;
+  --gray-200: #e7e9ed;
+  --gray-100: #F5F5F5;
+  --gray-50: #f8f9fa;
+  --blue-600: #0879c9;
+  --blue-700: #0669af;
+
+  /* Semantic colors */
+  --app-bg: #fbfbfb;
+  --surface: #ffffff;
+  --sidebar-bg: var(--gray-50);
+  --ink: var(--gray-950);
+  --ink-secondary: var(--gray-800);
+  --muted: var(--gray-600);
+  --soft-muted: var(--gray-500);
+  --stroke: var(--gray-300);
+  --stroke-soft: var(--gray-200);
+  --brand: var(--blue-600);
+  --brand-hover: var(--blue-700);
+  --hover: var(--gray-100);
+  --color-success: #2e7d32;
+  --color-success-soft: #edf7ed;
+  --color-warning: #ed6c02;
+  --color-warning-soft: #fff4e5;
+  --color-error: #d32f2f;
+  --color-error-soft: #fdeded;
+
+  /* Typography */
+  --font-family-sans: Inter, 'Segoe UI', Arial, sans-serif;
+  --font-size-sidebar: 13px;
+  --font-size-sidebar-description: 10.5px;
+  --font-size-page: 16px;
+  --font-size-description: 13px;
+  --font-size-button: 14px;
+  --font-size-page-title: 27px;
+  --font-size-section-title: 16px;
+  --font-size-metadata: 11px;
+
+  /* Spacing: 4px base */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Shape, borders, and elevation */
+  --radius-nav: 7px;
+  --radius-control: 7px;
+  --radius-search: 6px;
+  --radius-card: 9px;
+  --radius-dialog: 8px;
+  --radius-full: 999px;
+  --border-width: 1px;
+  --shadow-overlay: 0 8px 24px rgb(23 26 30 / 12%);
+
+  /* Motion */
+  --motion-fast: 150ms;
+  --motion-standard: 200ms;
+  --motion-ease: cubic-bezier(0.2, 0, 0, 1);
+}

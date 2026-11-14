@@ -1,0 +1,116 @@
+.ds-page { width: 100%; height: 100dvh; overflow-y: auto; background: var(--app-bg); color: var(--ink); }
+.ds-page p { text-wrap: pretty; }
+.ds-page h1, .ds-page h2, .ds-page h3 { text-wrap: balance; }
+.ds-content { width: min(1120px, 100%); margin: 0 auto; padding: 28px 32px 48px; }
+.ds-page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--stroke); }
+.ds-page-header h1 { margin: 0; color: var(--ink); font-size: 22px; font-weight: 600; line-height: 1.3; }
+.ds-page-header p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+.ds-back-link.MuiButton-root { min-height: 34px; flex: 0 0 auto; padding: 0 10px; border-radius: 6px; color: var(--ink); font-size: 14px; }
+.ds-section { padding: 22px 0; border-bottom: 1px solid var(--stroke-soft); }
+.ds-section-heading { margin-bottom: 14px; }
+.ds-section-heading h2 { margin: 0; color: var(--ink); font-size: 16px; font-weight: 600; line-height: 1.4; }
+.ds-section-heading p { margin: 3px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.ds-color-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ds-color-card.MuiPaper-root { display: flex; min-width: 0; gap: 10px; padding: 9px; border-color: var(--stroke); border-radius: 7px; box-shadow: none; }
+.ds-color-swatch { width: 34px; height: 34px; flex: 0 0 34px; border: 1px solid transparent; border-radius: 5px; }
+.ds-color-copy { display: grid; min-width: 0; gap: 2px; }
+.ds-color-copy code { overflow: hidden; color: var(--ink); font: 500 12px/1.35 var(--font-family-sans); text-overflow: ellipsis; white-space: nowrap; }
+.ds-color-copy p { margin: 1px 0 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
+.ds-contrast-list { margin-top: 12px; border: 1px solid var(--stroke); border-radius: 7px; background: var(--surface); }
+.ds-contrast-row { display: grid; grid-template-columns: minmax(0, 1fr) 70px 120px; min-height: 34px; align-items: center; gap: 10px; padding: 5px 10px; border-bottom: 1px solid var(--stroke-soft); color: var(--muted); font-size: 12px; }
+.ds-contrast-row:last-child { border-bottom: 0; }
+.ds-contrast-sample { width: fit-content; padding: 2px 5px; border-radius: 3px; }
+.ds-contrast-warning { color: #a33a3a; font-size: 12px; }
+.ds-type-list { display: grid; gap: 9px; }
+.ds-type-row { display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: baseline; gap: 16px; }
+.ds-type-meta { color: var(--muted); font-size: 12px; }
+.ds-type-row p { margin: 0; color: var(--ink); }
+.ds-type-title { font-size: 27px !important; font-weight: 600 !important; line-height: 1.25 !important; }
+.ds-type-section { font-size: 16px !important; font-weight: 600 !important; }
+.ds-type-body { font-size: 16px !important; }
+.ds-type-description { font-size: 13px !important; }
+.ds-type-button { font-size: 14px !important; font-weight: 500 !important; }
+.ds-type-sidebar { font-size: 13px !important; }
+.ds-type-sidebar-description { color: var(--muted) !important; font-size: 10.5px !important; }
+.ds-layout-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ds-spec-card.MuiPaper-root { padding: 14px; border-color: var(--stroke); border-radius: var(--radius-card); box-shadow: none; }
+.ds-state-label { margin: 0 0 7px !important; color: var(--muted); font-size: 12px !important; line-height: 1.3 !important; }
+.ds-spacing-list { display: grid; gap: 5px; }
+.ds-spacing-row { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 11px; }
+.ds-spacing-row span { width: 34px; }
+.ds-spacing-row div { height: 7px; border-radius: 2px; background: var(--brand); }
+.ds-radius-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ds-radius-item { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; }
+.ds-radius-item div { width: 30px; height: 26px; border: 1px solid var(--stroke); background: var(--surface); }
+.ds-divider.MuiDivider-root { margin: 14px 0 10px; border-color: var(--stroke-soft); }
+.ds-surface-sample { margin-top: 7px; padding: 8px 10px; border: 1px solid var(--stroke); border-radius: 6px; background: var(--surface); color: var(--ink-secondary); font-size: 11px; }
+.ds-overlay-sample { box-shadow: var(--shadow-overlay); }
+.ds-demo-block { min-width: 0; margin-top: 12px; }
+.ds-button-row, .ds-badge-row { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 8px; }
+.ds-button.MuiButton-root { min-height: 36px; padding: 0 12px; border-radius: 6px; box-shadow: none; font-size: 14px; font-weight: 500; text-transform: none; transition: background-color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease); }
+.ds-outline.MuiButton-root { border-color: var(--stroke); background: var(--surface); color: var(--ink-secondary); }
+.ds-outline.MuiButton-root:hover, .ds-forced-state[data-demo-state='hover'] .ds-outline.MuiButton-root { border-color: var(--stroke); background: var(--hover); }
+.ds-forced-state[data-demo-state='focus'] .ds-outline.MuiButton-root,
+.ds-forced-state[data-demo-state='focus'] .ds-outline.MuiButton-root:hover { border-color: var(--muted); background: var(--surface); box-shadow: none; }
+.ds-primary.MuiButton-root { background: var(--brand); color: #fff; }
+.ds-primary.MuiButton-root:hover { background: var(--brand-hover); box-shadow: none; }
+.ds-secondary.MuiButton-root { background: var(--surface); color: var(--ink); }
+.ds-secondary.MuiButton-root:hover { background: var(--hover); box-shadow: none; }
+.ds-ghost.MuiButton-root { color: var(--muted); }
+.ds-ghost.MuiButton-root:hover { background: var(--hover); color: var(--muted); }
+.ds-button.Mui-disabled { border-color: var(--stroke) !important; background: var(--hover) !important; color: var(--soft-muted) !important; }
+.ds-badge.MuiChip-root { height: 24px; border-radius: 5px; font-size: 11px; }
+.ds-badge-neutral.MuiChip-root { background: var(--hover); color: var(--ink-secondary); }
+.ds-badge-success.MuiChip-root { background: var(--color-success-soft); color: var(--color-success); }
+.ds-badge-warning.MuiChip-root { background: var(--color-warning-soft); color: #9a4d00; }
+.ds-badge-error.MuiChip-root { background: var(--color-error-soft); color: #a32121; }
+.ds-input-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.ds-input-grid .MuiTextField-root .MuiOutlinedInput-root { min-height: 40px; border-radius: var(--radius-control); background: var(--surface); font-size: 13px; }
+.ds-input-grid .MuiTextField-root .MuiOutlinedInput-notchedOutline { border-color: var(--stroke); }
+.ds-input-grid .MuiTextField-root .MuiOutlinedInput-root:not(.Mui-disabled):not(.Mui-focused):hover .MuiOutlinedInput-notchedOutline { border-color: var(--stroke); }
+.ds-input-grid .MuiTextField-root .MuiInputBase-input { padding: 9px 11px; }
+.ds-input-grid .MuiTextField-root .MuiFormHelperText-root { margin: 4px 0 0; font-size: 11px; }
+.ds-example-card.MuiPaper-root { min-height: 78px; padding: 13px; border-color: var(--stroke); border-radius: var(--radius-card); box-shadow: none; transition: background-color var(--motion-fast) var(--motion-ease); }
+.ds-example-card h3 { margin: 0; color: var(--ink); font-size: 13px; font-weight: 600; }
+.ds-example-card p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+.ds-example-card-hover, .ds-forced-state[data-demo-state='hover'] .ds-example-card { background: var(--hover); }
+.ds-list-demo { margin-top: 16px; }
+.ds-list.MuiList-root { overflow: hidden; border: 1px solid var(--stroke); border-radius: 7px; background: var(--surface); }
+.ds-list-row.MuiListItemButton-root { display: flex; min-height: 40px; justify-content: space-between; gap: 12px; padding: 7px 10px; border-bottom: 1px solid var(--stroke-soft); color: var(--ink-secondary); font-size: 12px; }
+.ds-list-row.MuiListItemButton-root:last-child { border-bottom: 0; }
+.ds-list-row.MuiListItemButton-root:hover, .ds-list-row-hover.MuiListItemButton-root { background: var(--hover); color: var(--ink-secondary); }
+.ds-list-row.Mui-selected, .ds-list-row.Mui-selected:hover { background: var(--hover) !important; color: var(--ink-secondary); }
+.ds-list-row.Mui-disabled { color: var(--soft-muted); }
+.ds-dialog-frame { position: relative; min-height: 224px; overflow: hidden; border: 1px solid var(--stroke); border-radius: var(--radius-card); background: var(--surface); }
+.ds-dialog-root.MuiDialog-root { position: absolute; inset: 0; z-index: 1; }
+.ds-dialog-root .MuiDialog-container { min-height: 100%; }
+.ds-dialog-root .MuiPaper-root { width: min(100% - 24px, 520px); margin: 12px; border: 1px solid var(--stroke); border-radius: var(--radius-dialog); box-shadow: var(--shadow-overlay); }
+.ds-dialog-root .MuiDialogTitle-root { padding: 14px 16px 6px; color: var(--ink); font-size: 16px; font-weight: 600; }
+.ds-dialog-root .MuiDialogContent-root { padding: 8px 16px 12px; color: var(--muted); font-size: 13px; }
+.ds-dialog-root .MuiDialogActions-root { gap: 6px; padding: 8px 12px 12px; }
+.ds-empty-sample.MuiPaper-root { display: grid; min-height: 78px; align-content: center; padding: 14px; border-color: var(--stroke); border-radius: 7px; box-shadow: none; }
+.ds-empty-sample p { margin: 0; color: var(--muted); font-size: 13px; }
+.ds-inline-link.MuiButton-root { min-height: 28px; margin-left: 2px; padding: 0 4px; color: var(--brand); font-size: 13px; text-transform: none; }
+.ds-page-footer { padding-top: 18px; color: var(--muted); font-size: 12px; }
+
+@media (max-width: 760px) {
+  .ds-content { padding: 22px 16px 36px; }
+  .ds-color-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ds-layout-grid, .ds-input-grid { grid-template-columns: minmax(0, 1fr); }
+  .ds-type-row { grid-template-columns: 1fr; gap: 3px; }
+  .ds-page-header { align-items: flex-start; }
+}
+
+@media (max-width: 460px) {
+  .ds-content { padding-inline: 12px; }
+  .ds-page-header { flex-direction: column; gap: 8px; }
+  .ds-page-header h1 { font-size: 20px; }
+  .ds-color-grid { grid-template-columns: minmax(0, 1fr); }
+  .ds-contrast-row { grid-template-columns: minmax(0, 1fr) 56px; }
+  .ds-contrast-warning { grid-column: 1 / -1; }
+  .ds-radius-list { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-page *, .ds-page *::before, .ds-page *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

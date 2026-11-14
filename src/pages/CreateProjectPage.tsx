@@ -1,30 +1,50 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Box, Button, FormControl, IconButton, InputBase, MenuItem, Paper, Select, TextField, Typography } from '@mui/material'
-import { CheckIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { Box, Button, ButtonBase, FormControl, FormControlLabel, IconButton, InputBase, Paper, Popover, Radio, RadioGroup, TextField, Typography } from '@mui/material'
+import { CheckIcon, ChevronDownIcon, MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { getSubjectAreas, searchKeywords, type WorkerKeyword, type WorkerSubjectArea } from '../services/workerApi'
+import type { LocalProject } from '../types/project'
+import type { NewProject } from '../services/projectStore'
 
-type RecentProject = { name: string; subject: string; topics: string[] }
+type CreateProjectPageProps = {
+  projects: LocalProject[]
+  projectsLoading: boolean
+  projectsError: string
+  canSaveProjects: boolean
+  storageMessage: string
+  onRetryProjects: () => void
+  onProjectCreate: (project: NewProject) => Promise<LocalProject>
+  onProjectOpen: (project: LocalProject) => void
+}
 
-export function CreateProjectPage() {
+export function CreateProjectPage({ projects, projectsLoading, projectsError, canSaveProjects, storageMessage, onRetryProjects, onProjectCreate, onProjectOpen }: CreateProjectPageProps) {
   const [projectName, setProjectName] = useState('')
   const [subjectId, setSubjectId] = useState('')
   const [subjectOptions, setSubjectOptions] = useState<WorkerSubjectArea[]>([])
   const [subjectLoading, setSubjectLoading] = useState(true)
   const [subjectError, setSubjectError] = useState('')
   const [subjectRequestVersion, setSubjectRequestVersion] = useState(0)
+  const [subjectPickerAnchor, setSubjectPickerAnchor] = useState<HTMLElement | null>(null)
+  const [subjectDraftId, setSubjectDraftId] = useState('')
+  const [subjectSearch, setSubjectSearch] = useState('')
   const [keywordQuery, setKeywordQuery] = useState('')
   const [suggestions, setSuggestions] = useState<WorkerKeyword[]>([])
   const [keywordRequestVersion, setKeywordRequestVersion] = useState(0)
   const [completedKeywordRequestKey, setCompletedKeywordRequestKey] = useState('')
   const [keywordFailure, setKeywordFailure] = useState<{ key: string; message: string } | null>(null)
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([])
-  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
-  const [createdMessage, setCreatedMessage] = useState('')
+  const [saveError, setSaveError] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
   const subject = useMemo(
     () => subjectOptions.find((option) => option.id === subjectId)?.display_name ?? '',
     [subjectId, subjectOptions],
   )
+  const filteredSubjectOptions = useMemo(() => {
+    const query = subjectSearch.trim().toLocaleLowerCase()
+    return query
+      ? subjectOptions.filter((option) => option.display_name.toLocaleLowerCase().includes(query))
+      : subjectOptions
+  }, [subjectOptions, subjectSearch])
   const keywordSearch = keywordQuery.trim() || subject
   const keywordRequestKey = !subjectLoading && keywordSearch ? JSON.stringify([keywordSearch, keywordRequestVersion]) : ''
   const keywordError = keywordFailure?.key === keywordRequestKey ? keywordFailure.message : ''
@@ -68,8 +88,12 @@ export function CreateProjectPage() {
   }, [keywordQuery, keywordRequestKey, keywordRequestVersion, keywordSearch, subject, subjectLoading])
 
   const toggleKeyword = (keyword: string) => {
+    if (!selectedKeywords.includes(keyword) && selectedKeywords.length >= 20) {
+      setSaveError('A project can have up to 20 keywords.')
+      return
+    }
     setSelectedKeywords((current) => current.includes(keyword) ? current.filter((item) => item !== keyword) : [...current, keyword])
-    setCreatedMessage('')
+    setSaveError('')
   }
 
   const resetForm = () => {
@@ -77,22 +101,47 @@ export function CreateProjectPage() {
     setSubjectId(subjectOptions.find((item) => item.display_name.toLowerCase().includes('computer science'))?.id ?? subjectOptions[0]?.id ?? '')
     setKeywordQuery('')
     setSelectedKeywords([])
-    setCreatedMessage('')
+    setSaveError('')
   }
 
-  const createProject = (event: FormEvent<HTMLFormElement>) => {
+  const createProject = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!canCreate) return
-    setRecentProjects((current) => [{ name: projectName.trim(), subject, topics: selectedKeywords }, ...current].slice(0, 3))
-    setCreatedMessage('Project created in this demo.')
-    setProjectName('')
-    setSelectedKeywords([])
+    if (!canCreate || !canSaveProjects || isSaving) return
+    setIsSaving(true)
+    setSaveError('')
+    const project: NewProject = {
+      name: projectName.trim(),
+      subjectAreaId: subjectId,
+      subject,
+      topics: [...selectedKeywords],
+    }
+    try {
+      await onProjectCreate(project)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not save this project to Firestore.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const retrySubjects = () => {
     setSubjectLoading(true)
     setSubjectError('')
     setSubjectRequestVersion((version) => version + 1)
+  }
+
+  const closeSubjectPicker = () => {
+    setSubjectPickerAnchor(null)
+    setSubjectSearch('')
+  }
+
+  const applySubjectSelection = () => {
+    if (subjectDraftId !== subjectId) {
+      setSubjectId(subjectDraftId)
+      setSelectedKeywords([])
+      setSaveError('')
+    }
+    closeSubjectPicker()
   }
 
   return <Box component="form" className="create-project-page" onSubmit={createProject}>
@@ -111,14 +160,73 @@ export function CreateProjectPage() {
           <Box className="project-fields">
             <Box className="project-field">
               <label htmlFor="project-name">Project name <b>*</b></label>
-              <TextField id="project-name" fullWidth size="small" value={projectName} onChange={(event) => { setProjectName(event.target.value); setCreatedMessage('') }} placeholder="Enter project name..." slotProps={{ htmlInput: { maxLength: 80 } }} />
+              <TextField id="project-name" fullWidth size="small" value={projectName} onChange={(event) => { setProjectName(event.target.value); setSaveError('') }} placeholder="Enter project name..." slotProps={{ htmlInput: { maxLength: 80 } }} />
             </Box>
             <Box className="project-field">
-              <label htmlFor="subject-area">Subject area <b>*</b></label>
+              <label id="subject-area-label">Subject area <b>*</b></label>
               <FormControl fullWidth size="small">
-                <Select id="subject-area" variant="outlined" value={subjectId} disabled={subjectLoading || !subjectOptions.length} onChange={(event) => { setSubjectId(event.target.value); setSelectedKeywords([]); setCreatedMessage('') }} inputProps={{ 'aria-label': 'Subject area' }}>
-                  {subjectOptions.map((option) => <MenuItem value={option.id} key={option.id}>{option.display_name}</MenuItem>)}
-                </Select>
+                <Button
+                  id="subject-area"
+                  type="button"
+                  variant="outlined"
+                  className="subject-area-trigger"
+                  disabled={subjectLoading || !subjectOptions.length}
+                  aria-labelledby="subject-area-label"
+                  aria-haspopup="dialog"
+                  aria-expanded={Boolean(subjectPickerAnchor)}
+                  onClick={(event) => {
+                    setSubjectDraftId(subjectId)
+                    setSubjectSearch('')
+                    setSubjectPickerAnchor(event.currentTarget)
+                  }}
+                >
+                  <span>{subject || 'Select subject area'}</span>
+                  <ChevronDownIcon width={16} height={16} aria-hidden="true" />
+                </Button>
+                <Popover
+                  open={Boolean(subjectPickerAnchor)}
+                  anchorEl={subjectPickerAnchor}
+                  onClose={closeSubjectPicker}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                  slotProps={{ paper: {
+                    className: 'subject-area-popover',
+                    role: 'dialog',
+                    'aria-label': 'Select subject area',
+                    style: { width: subjectPickerAnchor ? Math.min(subjectPickerAnchor.getBoundingClientRect().width, window.innerWidth - 24) : undefined },
+                  } }}
+                >
+                  <Box className="subject-area-search">
+                    <MagnifyingGlassIcon width={16} height={16} aria-hidden="true" />
+                    <InputBase
+                      autoFocus
+                      value={subjectSearch}
+                      onChange={(event) => setSubjectSearch(event.target.value)}
+                      placeholder="Search subject areas..."
+                      inputProps={{
+                        'aria-label': 'Search subject areas',
+                        onKeyDown: (event) => { if (event.key === 'Enter') event.preventDefault() },
+                      }}
+                    />
+                  </Box>
+                  <Box className="subject-area-options">
+                    {filteredSubjectOptions.length
+                      ? <RadioGroup aria-label="Subject areas" value={subjectDraftId} onChange={(event) => setSubjectDraftId(event.target.value)}>
+                        {filteredSubjectOptions.map((option) => <FormControlLabel
+                          className={`subject-area-option${subjectDraftId === option.id ? ' is-selected' : ''}`}
+                          key={option.id}
+                          value={option.id}
+                          control={<Radio size="small" />}
+                          label={option.display_name}
+                        />)}
+                      </RadioGroup>
+                      : <Typography className="subject-area-empty">No subject areas found.</Typography>}
+                  </Box>
+                  <Box className="filter-menu-actions">
+                    <Button type="button" onClick={closeSubjectPicker}>Cancel</Button>
+                    <Button type="button" variant="contained" disabled={!subjectDraftId} onClick={applySubjectSelection}>Apply</Button>
+                  </Box>
+                </Popover>
                 {subjectLoading && <Typography className="data-status" role="status">Loading subject areas...</Typography>}
                 {subjectError && <Typography className="data-status data-status-error" role="alert">{subjectError} <Button type="button" size="small" onClick={retrySubjects}>Retry</Button></Typography>}
                 {!subjectLoading && !subjectError && !subjectOptions.length && <Typography className="data-status">No subject areas are available.</Typography>}
@@ -129,10 +237,14 @@ export function CreateProjectPage() {
 
         <Paper variant="outlined" className="recent-projects-card">
           <Box className="recent-projects-header"><Typography component="h2">Recent projects</Typography></Box>
-          <Typography className="recent-projects-description">Projects you opened recently will show here.</Typography>
-          {recentProjects.length === 0
-            ? <Box className="recent-projects-empty"><Box><Typography>No recent projects yet</Typography><Typography>Your projects will appear here once created.</Typography></Box></Box>
-            : <Box className="recent-project-list">{recentProjects.map((project, index) => <Box className="recent-project-row" key={`${project.name}-${index}`}><Box className="recent-project-mark">{project.name.slice(0, 1).toUpperCase()}</Box><Box className="recent-project-copy"><Typography>{project.name}</Typography><Typography>{project.subject} · {project.topics.length} topic{project.topics.length === 1 ? '' : 's'}</Typography></Box><CheckIcon width={16} height={16} aria-label="Created" /></Box>)}</Box>}
+          <Typography className="recent-projects-description">Your saved projects appear here.</Typography>
+          {projectsError
+            ? <Box className="recent-projects-empty"><Box><Typography>Could not load saved projects.</Typography><Button type="button" size="small" onClick={onRetryProjects}>Retry</Button></Box></Box>
+            : projectsLoading && projects.length === 0
+              ? <Box className="recent-projects-empty"><Typography role="status">Loading saved projects...</Typography></Box>
+              : projects.length === 0
+                ? <Box className="recent-projects-empty"><Box><Typography>No recent projects yet</Typography><Typography>Your projects will appear here once created.</Typography></Box></Box>
+                : <Box className="recent-project-list">{projects.slice(0, 3).map((project) => <ButtonBase className="recent-project-row" key={project.id} onClick={() => onProjectOpen(project)} title={`Open ${project.name}`}><Box className="recent-project-mark">{project.name.slice(0, 1).toUpperCase()}</Box><Box className="recent-project-copy"><Typography>{project.name}</Typography><Typography>{project.subject} · {project.topics.length} topic{project.topics.length === 1 ? '' : 's'}</Typography></Box><CheckIcon width={16} height={16} aria-label="Saved" /></ButtonBase>)}</Box>}
         </Paper>
       </Box>
 
@@ -157,8 +269,8 @@ export function CreateProjectPage() {
     <Box className="project-flex-spacer" aria-hidden="true" />
 
     <Box className="create-project-footer">
-      <Typography className="demo-note" role="status">{createdMessage || 'Project saving is local in this demo.'}</Typography>
-      <Box className="project-footer-actions"><Button type="button" variant="outlined" onClick={resetForm} className="reset-button">Reset</Button><Button type="submit" variant="contained" disabled={!canCreate} className="create-button">Create Project <span aria-hidden="true">→</span></Button></Box>
+      <Typography className={`demo-note${saveError ? ' data-status-error' : ''}`} role={saveError ? 'alert' : 'status'}>{saveError || storageMessage}</Typography>
+      <Box className="project-footer-actions"><Button type="button" variant="outlined" onClick={resetForm} className="reset-button">Reset</Button><Button type="submit" variant="contained" disabled={!canCreate || !canSaveProjects || isSaving} className="create-button">{isSaving ? 'Saving...' : 'Create Project'} <span aria-hidden="true">→</span></Button></Box>
     </Box>
   </Box>
 }
