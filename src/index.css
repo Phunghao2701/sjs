@@ -265,10 +265,6 @@ input:focus-visible,
 }
 
 .overview-controls { position: relative; width: 100%; height: 231px; flex: 0 0 231px; }
-.overview-page.has-results .overview-controls { height: 292px; flex-basis: 292px; }
-.overview-page.has-results .search-page-heading { top: 59px; }
-.overview-page.has-results .research-search { top: 135px; }
-.overview-page.has-results .quick-filters { top: 198px; }
 .search-page-heading { position: absolute; top: 29px; right: 0; left: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center; }
 .search-page-heading h1 { margin: 0; color: #171a1e; font-size: 27px; font-weight: 600; letter-spacing: -.035em; line-height: 1.25; }
 .query-summary { margin-top: 5px !important; color: #7a828a; font-size: 12px !important; }
@@ -500,7 +496,7 @@ input:focus-visible,
 
 @media (max-width: 620px) {
   .overview-page { min-height: calc(100dvh - 60px); height: auto; padding: 20px 12px; }
-  .overview-controls, .overview-page.has-results .overview-controls { position: static; display: flex; height: auto; flex: 0 0 auto; flex-direction: column; gap: 14px; }
+  .overview-controls { position: static; display: flex; height: auto; flex: 0 0 auto; flex-direction: column; gap: 14px; }
   .search-page-heading { position: static; }
   .search-page-heading { min-height: 48px; }
   .search-page-heading h1 { max-width: 100%; font-size: 20px; }

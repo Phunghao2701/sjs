@@ -589,7 +589,7 @@ export function OverviewPage() {
   const EntityIcon = entityIcons[entity]
   const showingCount = Math.min(5, total || records.length)
 
-  return <Box className={'overview-page' + (showResults ? ' has-results' : '')}>
+  return <Box className="overview-page">
     <Box className="overview-controls">
       <Box className="search-page-heading"><Typography component="h1">Time to search something great.</Typography></Box>
       <Box component="form" className="research-search" onSubmit={submitSearch}>
