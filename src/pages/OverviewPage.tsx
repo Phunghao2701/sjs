@@ -107,7 +107,7 @@ function makeFilterGroups(
     ],
   }
 
-  const optionLimit = definitions[entity].length > 3 ? 3 : 5
+  const optionLimit = definitions[entity].length > 3 ? 3 : 4
   return definitions[entity].map(({ title, key }) => {
     const facetOptions = (facets[key] ?? []).map((option) => ({
       label: key === 'has_orcid' || key === 'is_open_access'
