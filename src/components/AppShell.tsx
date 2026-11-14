@@ -8,21 +8,23 @@ import { Sidebar } from './Sidebar'
 type AppShellProps = {
   activePage: AppPage
   activeProject: LocalProject | null
+  projects: LocalProject[]
   projectTab: ProjectTab
   onNavigate: (page: AppPage) => void
-  onProjectTabChange: (tab: ProjectTab) => void
+  onProjectOpen: (project: LocalProject, tab: ProjectTab) => void
   children: ReactNode
 }
 
-export function AppShell({ activePage, activeProject, projectTab, onNavigate, onProjectTabChange, children }: AppShellProps) {
+export function AppShell({ activePage, activeProject, projects, projectTab, onNavigate, onProjectOpen, children }: AppShellProps) {
   return (
     <Box className="app-shell">
       <Sidebar
         activePage={activePage}
         activeProject={activeProject}
+        projects={projects}
         projectTab={projectTab}
         onNavigate={onNavigate}
-        onProjectTabChange={onProjectTabChange}
+        onProjectOpen={onProjectOpen}
       />
       <Box component="main" className="main-shell">
         <Box component="header" className="topbar">

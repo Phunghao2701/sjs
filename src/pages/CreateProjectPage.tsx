@@ -1,12 +1,22 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Box, Button, FormControl, FormControlLabel, IconButton, InputBase, Paper, Popover, Radio, RadioGroup, TextField, Typography } from '@mui/material'
+import { Box, Button, ButtonBase, FormControl, FormControlLabel, IconButton, InputBase, Paper, Popover, Radio, RadioGroup, TextField, Typography } from '@mui/material'
 import { CheckIcon, ChevronDownIcon, MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { getSubjectAreas, searchKeywords, type WorkerKeyword, type WorkerSubjectArea } from '../services/workerApi'
 import type { LocalProject } from '../types/project'
+import type { NewProject } from '../services/projectStore'
 
-type RecentProject = { name: string; subject: string; topics: string[] }
+type CreateProjectPageProps = {
+  projects: LocalProject[]
+  projectsLoading: boolean
+  projectsError: string
+  canSaveProjects: boolean
+  storageMessage: string
+  onRetryProjects: () => void
+  onProjectCreate: (project: NewProject) => Promise<LocalProject>
+  onProjectOpen: (project: LocalProject) => void
+}
 
-export function CreateProjectPage({ onProjectCreate }: { onProjectCreate: (project: LocalProject) => void }) {
+export function CreateProjectPage({ projects, projectsLoading, projectsError, canSaveProjects, storageMessage, onRetryProjects, onProjectCreate, onProjectOpen }: CreateProjectPageProps) {
   const [projectName, setProjectName] = useState('')
   const [subjectId, setSubjectId] = useState('')
   const [subjectOptions, setSubjectOptions] = useState<WorkerSubjectArea[]>([])
@@ -22,8 +32,8 @@ export function CreateProjectPage({ onProjectCreate }: { onProjectCreate: (proje
   const [completedKeywordRequestKey, setCompletedKeywordRequestKey] = useState('')
   const [keywordFailure, setKeywordFailure] = useState<{ key: string; message: string } | null>(null)
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([])
-  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
-  const [createdMessage, setCreatedMessage] = useState('')
+  const [saveError, setSaveError] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
   const subject = useMemo(
     () => subjectOptions.find((option) => option.id === subjectId)?.display_name ?? '',
@@ -78,8 +88,12 @@ export function CreateProjectPage({ onProjectCreate }: { onProjectCreate: (proje
   }, [keywordQuery, keywordRequestKey, keywordRequestVersion, keywordSearch, subject, subjectLoading])
 
   const toggleKeyword = (keyword: string) => {
+    if (!selectedKeywords.includes(keyword) && selectedKeywords.length >= 20) {
+      setSaveError('A project can have up to 20 keywords.')
+      return
+    }
     setSelectedKeywords((current) => current.includes(keyword) ? current.filter((item) => item !== keyword) : [...current, keyword])
-    setCreatedMessage('')
+    setSaveError('')
   }
 
   const resetForm = () => {
@@ -87,24 +101,27 @@ export function CreateProjectPage({ onProjectCreate }: { onProjectCreate: (proje
     setSubjectId(subjectOptions.find((item) => item.display_name.toLowerCase().includes('computer science'))?.id ?? subjectOptions[0]?.id ?? '')
     setKeywordQuery('')
     setSelectedKeywords([])
-    setCreatedMessage('')
+    setSaveError('')
   }
 
-  const createProject = (event: FormEvent<HTMLFormElement>) => {
+  const createProject = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!canCreate) return
-    const createdProject: LocalProject = {
-      id: `project-${Date.now()}`,
+    if (!canCreate || !canSaveProjects || isSaving) return
+    setIsSaving(true)
+    setSaveError('')
+    const project: NewProject = {
       name: projectName.trim(),
       subjectAreaId: subjectId,
       subject,
       topics: [...selectedKeywords],
     }
-    setRecentProjects((current) => [{ name: createdProject.name, subject, topics: selectedKeywords }, ...current].slice(0, 3))
-    setCreatedMessage('Project created in this demo.')
-    setProjectName('')
-    setSelectedKeywords([])
-    onProjectCreate(createdProject)
+    try {
+      await onProjectCreate(project)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not save this project to Firestore.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const retrySubjects = () => {
@@ -122,7 +139,7 @@ export function CreateProjectPage({ onProjectCreate }: { onProjectCreate: (proje
     if (subjectDraftId !== subjectId) {
       setSubjectId(subjectDraftId)
       setSelectedKeywords([])
-      setCreatedMessage('')
+      setSaveError('')
     }
     closeSubjectPicker()
   }
@@ -143,7 +160,7 @@ export function CreateProjectPage({ onProjectCreate }: { onProjectCreate: (proje
           <Box className="project-fields">
             <Box className="project-field">
               <label htmlFor="project-name">Project name <b>*</b></label>
-              <TextField id="project-name" fullWidth size="small" value={projectName} onChange={(event) => { setProjectName(event.target.value); setCreatedMessage('') }} placeholder="Enter project name..." slotProps={{ htmlInput: { maxLength: 80 } }} />
+              <TextField id="project-name" fullWidth size="small" value={projectName} onChange={(event) => { setProjectName(event.target.value); setSaveError('') }} placeholder="Enter project name..." slotProps={{ htmlInput: { maxLength: 80 } }} />
             </Box>
             <Box className="project-field">
               <label id="subject-area-label">Subject area <b>*</b></label>
@@ -220,10 +237,14 @@ export function CreateProjectPage({ onProjectCreate }: { onProjectCreate: (proje
 
         <Paper variant="outlined" className="recent-projects-card">
           <Box className="recent-projects-header"><Typography component="h2">Recent projects</Typography></Box>
-          <Typography className="recent-projects-description">Projects you opened recently will show here.</Typography>
-          {recentProjects.length === 0
-            ? <Box className="recent-projects-empty"><Box><Typography>No recent projects yet</Typography><Typography>Your projects will appear here once created.</Typography></Box></Box>
-            : <Box className="recent-project-list">{recentProjects.map((project, index) => <Box className="recent-project-row" key={`${project.name}-${index}`}><Box className="recent-project-mark">{project.name.slice(0, 1).toUpperCase()}</Box><Box className="recent-project-copy"><Typography>{project.name}</Typography><Typography>{project.subject} · {project.topics.length} topic{project.topics.length === 1 ? '' : 's'}</Typography></Box><CheckIcon width={16} height={16} aria-label="Created" /></Box>)}</Box>}
+          <Typography className="recent-projects-description">Your saved projects appear here.</Typography>
+          {projectsError
+            ? <Box className="recent-projects-empty"><Box><Typography>Could not load saved projects.</Typography><Button type="button" size="small" onClick={onRetryProjects}>Retry</Button></Box></Box>
+            : projectsLoading && projects.length === 0
+              ? <Box className="recent-projects-empty"><Typography role="status">Loading saved projects...</Typography></Box>
+              : projects.length === 0
+                ? <Box className="recent-projects-empty"><Box><Typography>No recent projects yet</Typography><Typography>Your projects will appear here once created.</Typography></Box></Box>
+                : <Box className="recent-project-list">{projects.slice(0, 3).map((project) => <ButtonBase className="recent-project-row" key={project.id} onClick={() => onProjectOpen(project)} title={`Open ${project.name}`}><Box className="recent-project-mark">{project.name.slice(0, 1).toUpperCase()}</Box><Box className="recent-project-copy"><Typography>{project.name}</Typography><Typography>{project.subject} · {project.topics.length} topic{project.topics.length === 1 ? '' : 's'}</Typography></Box><CheckIcon width={16} height={16} aria-label="Saved" /></ButtonBase>)}</Box>}
         </Paper>
       </Box>
 
@@ -248,8 +269,8 @@ export function CreateProjectPage({ onProjectCreate }: { onProjectCreate: (proje
     <Box className="project-flex-spacer" aria-hidden="true" />
 
     <Box className="create-project-footer">
-      <Typography className="demo-note" role="status">{createdMessage || 'Project saving is local in this demo.'}</Typography>
-      <Box className="project-footer-actions"><Button type="button" variant="outlined" onClick={resetForm} className="reset-button">Reset</Button><Button type="submit" variant="contained" disabled={!canCreate} className="create-button">Create Project <span aria-hidden="true">→</span></Button></Box>
+      <Typography className={`demo-note${saveError ? ' data-status-error' : ''}`} role={saveError ? 'alert' : 'status'}>{saveError || storageMessage}</Typography>
+      <Box className="project-footer-actions"><Button type="button" variant="outlined" onClick={resetForm} className="reset-button">Reset</Button><Button type="submit" variant="contained" disabled={!canCreate || !canSaveProjects || isSaving} className="create-button">{isSaving ? 'Saving...' : 'Create Project'} <span aria-hidden="true">→</span></Button></Box>
     </Box>
   </Box>
 }

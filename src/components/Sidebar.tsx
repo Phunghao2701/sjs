@@ -20,9 +20,10 @@ import type { LocalProject, ProjectTab } from '../types/project'
 type SidebarProps = {
   activePage: AppPage
   activeProject: LocalProject | null
+  projects: LocalProject[]
   projectTab: ProjectTab
   onNavigate: (page: AppPage) => void
-  onProjectTabChange: (tab: ProjectTab) => void
+  onProjectOpen: (project: LocalProject, tab: ProjectTab) => void
 }
 
 const projectSections: { label: string; value: ProjectTab }[] = [
@@ -32,14 +33,9 @@ const projectSections: { label: string; value: ProjectTab }[] = [
   { label: 'Members', value: 'members' },
 ]
 
-export function Sidebar({ activePage, activeProject, projectTab, onNavigate, onProjectTabChange }: SidebarProps) {
+export function Sidebar({ activePage, activeProject, projects, projectTab, onNavigate, onProjectOpen }: SidebarProps) {
   const [projectOpen, setProjectOpen] = useState(() => !window.matchMedia('(max-width: 620px)').matches)
   const projectPageActive = activePage === 'project-detail'
-
-  const openProjectSection = (tab: ProjectTab) => {
-    onProjectTabChange(tab)
-    onNavigate('project-detail')
-  }
 
   return (
     <Box component="aside" className="sidebar">
@@ -97,26 +93,26 @@ export function Sidebar({ activePage, activeProject, projectTab, onNavigate, onP
               Create Project
             </ButtonBase>
 
-            {activeProject && <>
+            {projects.map((project) => <Box key={project.id}>
               <ButtonBase
-                className={`nested-nav-link nested-nav-project${projectPageActive ? ' is-active' : ''}`}
-                onClick={() => openProjectSection('overview')}
-                aria-current={projectPageActive && projectTab === 'overview' ? 'page' : undefined}
-                title={activeProject.name}
+                className={`nested-nav-link nested-nav-project${activeProject?.id === project.id && projectPageActive ? ' is-active' : ''}`}
+                onClick={() => onProjectOpen(project, 'overview')}
+                aria-current={activeProject?.id === project.id && projectPageActive && projectTab === 'overview' ? 'page' : undefined}
+                title={project.name}
               >
-                <span>{activeProject.name}</span>
+                <span>{project.name}</span>
               </ButtonBase>
-              <Box className="project-detail-nav" aria-label={`${activeProject.name} sections`}>
+              {activeProject?.id === project.id && projectPageActive && <Box className="project-detail-nav" aria-label={`${project.name} sections`}>
                 {projectSections.map((section) => <ButtonBase
                   key={section.value}
-                  className={`project-detail-link${projectPageActive && projectTab === section.value ? ' is-active' : ''}`}
-                  onClick={() => openProjectSection(section.value)}
-                  aria-current={projectPageActive && projectTab === section.value ? 'page' : undefined}
+                  className={`project-detail-link${projectTab === section.value ? ' is-active' : ''}`}
+                  onClick={() => onProjectOpen(project, section.value)}
+                  aria-current={projectTab === section.value ? 'page' : undefined}
                 >
                   {section.label}
                 </ButtonBase>)}
-              </Box>
-            </>}
+              </Box>}
+            </Box>)}
           </Box>}
         </Box>
       </Box>
