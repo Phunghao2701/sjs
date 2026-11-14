@@ -124,7 +124,7 @@ function makeFilterGroups(
     ))
     const selectedValuesSet = new Set(selected.map((option) => option.value))
     const options = [...selected, ...facetOptions.filter((option) => !selectedValuesSet.has(option.value))]
-      .slice(0, Math.max(optionLimit, selected.length))
+      .slice(0, optionLimit)
     return { title, key, options }
   })
 }
