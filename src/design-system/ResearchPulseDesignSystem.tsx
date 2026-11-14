@@ -15,7 +15,6 @@ const colorTokens: ColorToken[] = [
   { name: '--hover', value: '#f0f2f5', usage: 'Nền hover và mục đang chọn' },
   { name: '--brand', value: '#0879c9', usage: 'Hành động chính, link và focus' },
   { name: '--brand-hover', value: '#0669af', usage: 'Nền hover của hành động chính' },
-  { name: '--brand-soft', value: '#eaf5fc', usage: 'Nền nhấn nhẹ' },
 ]
 
 const contrastPairs = [
@@ -138,10 +137,9 @@ export function ResearchPulseDesignSystem() {
             </div>
           </div>
           <div className="ds-demo-block">
-            <StateLabel>Rê · focus · khóa</StateLabel>
+            <StateLabel>Rê · khóa</StateLabel>
             <div className="ds-button-row">
               <div className="ds-forced-state" data-demo-state="hover" inert><Button variant="outlined" className="ds-button ds-outline">Rê chuột</Button></div>
-              <div className="ds-forced-state" data-demo-state="focus" inert><Button variant="outlined" className="ds-button ds-outline">Focus bàn phím</Button></div>
               <Button variant="outlined" className="ds-button" disabled>Đang khóa</Button>
             </div>
           </div>

@@ -24,7 +24,6 @@ Status: preview prepared for review.
 | `--stroke-soft` | `#e7e9ed` | Dividers |
 | `--brand` | `#0879c9` | Primary action, link, focus |
 | `--brand-hover` | `#0669af` | Primary action hover |
-| `--brand-soft` | `#eaf5fc` | Subtle selected state |
 | `--hover` | `#f0f2f5` | Hover and neutral selected surface |
 
 Status colors are reserved for real success, warning, and error states. Keep metadata readable against the light canvas; use lighter grays for non-text borders and decorative marks only.
