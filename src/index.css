@@ -300,14 +300,34 @@ input:focus-visible,
 .query-more-button:hover, .query-submit-button:hover, .quiet-icon-button:hover { background: #f2f4f6 !important; }
 
 .quick-filters { position: absolute; top: 168px; left: 50%; display: flex; width: min(100%, 919px); min-width: 0; align-items: center; justify-content: flex-start; gap: 8px; transform: translateX(-50%); }
-.quick-filter-chip { width: 124px; height: 32px; flex: 0 0 124px; padding: 0 10px; border: 1px solid #e2e5e9; border-radius: 7px; background: #fff; }
-.quick-filter-chip:nth-child(2) { width: 109px; flex-basis: 109px; }
-.quick-filter { width: 100%; height: 30px; }
-.quick-filter .MuiInputBase-root { width: 100%; height: 30px; font-size: 12px; }
-.quick-filter .MuiSelect-select { min-height: auto !important; padding: 6px 20px 6px 0 !important; }
-.quick-filter .MuiSelect-icon { right: -1px; width: 14px; color: #626972; }
+.quick-filter-chip { display: flex; width: auto; height: 32px; flex: 0 0 auto; align-items: center; padding: 0; border: 1px solid #e2e5e9; border-radius: 7px; background: #fff; }
+.quick-filter-trigger { display: flex !important; min-width: 86px !important; max-width: 240px; height: 30px; justify-content: space-between !important; gap: 10px; padding: 0 9px !important; color: #171a1e !important; font-size: 12px !important; font-weight: 400 !important; line-height: 1 !important; text-align: left; text-transform: none !important; white-space: nowrap; }
+.quick-filter-summary { overflow: hidden; text-overflow: ellipsis; }
+.quick-filter-trigger svg { flex: 0 0 auto; color: #626972; }
+.quick-filter-chip.is-selected { max-width: 268px; border-color: #08090a; background: #08090a; }
+.quick-filter-chip.is-selected .quick-filter-trigger { min-width: 0 !important; max-width: 238px; flex: 1 1 auto; justify-content: flex-start !important; padding-right: 2px !important; color: #fff !important; font-weight: 500 !important; }
+.quick-filter-clear { width: 28px; height: 30px; flex: 0 0 28px; margin-right: 2px; color: #fff !important; border-radius: 0 5px 5px 0 !important; }
+.quick-filter-clear:hover { background: rgba(255,255,255,.12) !important; }
 .quick-filter-chip:focus-within { border-color: #92c4e6; box-shadow: 0 0 0 2px rgba(8,121,201,.1); }
-.quick-filter .MuiInputBase-root::before, .quick-filter .MuiInputBase-root::after, .research-search .MuiInputBase-root::before, .research-search .MuiInputBase-root::after { display: none; }
+.research-search .MuiInputBase-root::before, .research-search .MuiInputBase-root::after { display: none; }
+.filter-menu-paper { display: flex; max-height: min(390px, calc(100dvh - 24px)); flex-direction: column; overflow: hidden; border: 1px solid #e2e5e9; border-radius: 8px !important; box-shadow: 0 8px 24px rgba(23,26,30,.12) !important; }
+.filter-menu-paper-searchable { width: min(410px, calc(100vw - 24px)); }
+.filter-menu-paper-compact { width: min(280px, calc(100vw - 24px)); }
+.filter-menu-search { display: flex; height: 38px; flex: 0 0 38px; align-items: center; gap: 8px; padding: 0 10px; color: #777f88; border-bottom: 1px solid #e2e5e9; }
+.filter-menu-search .MuiInputBase-root { min-width: 0; flex: 1; color: #252a2f; font-size: 12px; }
+.filter-menu-search .MuiInputBase-input { padding: 0; }
+.filter-menu-search .MuiInputBase-input::placeholder { color: #969da6; opacity: 1; }
+.filter-menu-options { min-height: 44px; max-height: 295px; overflow: auto; padding: 5px 8px; }
+.filter-menu-option { display: flex; min-width: 0; min-height: 29px; align-items: center; gap: 8px; padding: 0 3px; cursor: pointer; }
+.filter-menu-option .MuiCheckbox-root { width: 15px; height: 15px; flex: 0 0 15px; }
+.filter-menu-option .MuiSvgIcon-root { width: 16px; height: 16px; }
+.filter-menu-option-label { overflow: hidden; min-width: 0; flex: 1; color: #252a2f; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.filter-menu-option-count { color: #747c85; font-size: 11px; white-space: nowrap; }
+.filter-menu-status { padding: 13px 5px; color: #747c85; font-size: 12px !important; line-height: 1.4 !important; }
+.filter-menu-actions { display: flex; height: 48px; flex: 0 0 48px; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 10px; border-top: 1px solid #e2e5e9; }
+.filter-menu-actions .MuiButton-root { min-width: 58px; height: 31px; padding: 0 10px; color: #343a40; font-size: 12px; text-transform: none; }
+.filter-menu-actions .MuiButton-contained { color: #fff; background: #0879c9; box-shadow: none; }
+.filter-menu-actions .MuiButton-contained:hover { background: #0669af; box-shadow: none; }
 .more-filters-button { min-width: 82px !important; height: 32px; padding: 0 10px !important; color: #171a1e !important; font-size: 14px !important; font-weight: 400 !important; }
 .more-filters-button:hover { background: #f0f2f5 !important; }
 
@@ -343,7 +363,8 @@ input:focus-visible,
 .filter-card-title-row h3 { overflow: hidden; flex: 1; margin: 0; color: #171a1e; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .quiet-icon-button { width: 27px; height: 27px; color: #858d96 !important; }
 .filter-card-divider, .results-divider { width: 100%; height: 1px; flex: 0 0 1px; background: #e2e5e9; }
-.filter-options { display: flex; min-height: 0; flex-direction: column; }
+.filter-options { display: flex; min-height: 0; flex-direction: column; overflow: auto; }
+.filter-status { padding-top: 3px; color: #747c85; font-size: 11px !important; line-height: 1.4 !important; }
 .filter-option { display: flex; min-width: 0; min-height: 25px; align-items: center; gap: 7px; cursor: pointer; }
 .filter-option .MuiCheckbox-root { width: 15px; height: 15px; flex: 0 0 15px; }
 .filter-option .MuiSvgIcon-root { width: 16px; height: 16px; }
@@ -489,7 +510,6 @@ input:focus-visible,
   .research-query { min-width: 0; height: 38px; padding-left: 5px; }
   .query-more-button, .query-submit-button { width: 32px; height: 32px; }
   .quick-filters { position: relative; top: auto; left: auto; width: 100%; flex-wrap: wrap; justify-content: flex-start; transform: none; }
-  .quick-filter-chip { width: 114px; flex-basis: 114px; }
   .search-empty-state { min-height: 430px; padding: 20px 12px; }
   .search-empty-icon { width: 86px; height: 86px; }
   .search-empty-icon svg { width: 38px; height: 38px; }
