@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Box, Button, ButtonBase, CircularProgress, IconButton, InputBase, MenuItem, Paper, Select, Typography } from '@mui/material'
+import { Box, Button, ButtonBase, IconButton, InputBase, MenuItem, Paper, Select, Typography } from '@mui/material'
 import {
   ChartBarIcon,
   ClockIcon,
@@ -36,7 +36,6 @@ type ProjectOverviewData = {
   types: DistributionItem[]
   subjects: DistributionItem[]
   sourceCount: number
-  sampleSize: number
   growthRate: number | null
   updatedAt: string
 }
@@ -56,7 +55,7 @@ function buildProjectSearch(topics: string[], subject: string) {
 
   const fallbackSubject = subject.replace(/["\\]/g, '').replace(/\s+/g, ' ').trim()
   const query = included.length ? `(${included.join(' OR ')})` : `"${fallbackSubject}"`
-  return { query, includedTopicCount: included.length, totalTopicCount: terms.length }
+  return { query }
 }
 
 function buildProjectOverview(
@@ -78,19 +77,33 @@ function buildProjectOverview(
 
   const subjectCounts = new Map<string, number>()
   const sourceNames = new Set<string>()
+  const typeCounts = new Map<string, number>([['Journal', 0], ['Conference', 0], ['Other', 0]])
   for (const work of items) {
     const subject = work.subject_area?.name?.trim()
     if (subject) subjectCounts.set(subject, (subjectCounts.get(subject) ?? 0) + 1)
     if (work.journal_name) sourceNames.add(work.journal_name)
   }
+  for (const facet of facets.type ?? []) {
+    const type = facet.label.toLocaleLowerCase()
+    const group = /conference|proceed/.test(type)
+      ? 'Conference'
+      : /article|review|journal/.test(type)
+        ? 'Journal'
+        : 'Other'
+    typeCounts.set(group, (typeCounts.get(group) ?? 0) + facet.count)
+  }
+  const sortedSubjects = [...subjectCounts]
+    .map(([label, count]) => ({ label, count }))
+    .sort((left, right) => right.count - left.count)
+  const topSubjects = sortedSubjects.slice(0, 3)
+  const otherSubjectCount = sortedSubjects.slice(3).reduce((sum, item) => sum + item.count, 0)
 
   return {
     totalWorks,
     years,
-    types: (facets.type ?? []).slice(0, 5).map((facet) => ({ label: facet.label, count: facet.count })),
-    subjects: [...subjectCounts].map(([label, count]) => ({ label, count })).sort((left, right) => right.count - left.count).slice(0, 5),
+    types: [...typeCounts].map(([label, count]) => ({ label, count })),
+    subjects: otherSubjectCount > 0 ? [...topSubjects, { label: 'Others', count: otherSubjectCount }] : topSubjects,
     sourceCount: sourceNames.size,
-    sampleSize: items.length,
     growthRate,
     updatedAt: new Date().toISOString(),
   }
@@ -191,8 +204,6 @@ export function ProjectDetailPage({ project, activeTab, onTabChange }: ProjectDe
         data={overviewData}
         loading={overviewLoading}
         error={overviewError}
-        includedTopicCount={projectSearch.includedTopicCount}
-        totalTopicCount={projectSearch.totalTopicCount}
         onRetry={() => setOverviewRequestVersion((version) => version + 1)}
       />}
       {activeTab === 'news-feed' && <NewsFeedContent
@@ -223,38 +234,25 @@ function OverviewContent({
   data,
   loading,
   error,
-  includedTopicCount,
-  totalTopicCount,
   onRetry,
 }: {
   topics: string[]
   data: ProjectOverviewData | null
   loading: boolean
   error: string
-  includedTopicCount: number
-  totalTopicCount: number
   onRetry: () => void
 }) {
   const growthRate = data?.growthRate
   const metrics = [
-    { label: 'Related articles', value: loading ? '…' : error ? '—' : data ? formatWorkCount(data.totalWorks) : '0' },
-    { label: 'Growth rate', value: loading ? '…' : growthRate === null || growthRate === undefined ? '—' : `${growthRate >= 0 ? '+' : ''}${growthRate.toFixed(1)}%` },
+    { label: 'Related articles', value: loading ? '0' : error ? '—' : data ? formatWorkCount(data.totalWorks) : '0' },
+    { label: 'Growth rate', value: growthRate === null || growthRate === undefined ? '—' : `${growthRate >= 0 ? '+' : ''}${growthRate.toFixed(1)}%` },
     { label: 'Tracked keywords', value: String(topics.length) },
-    { label: 'New alerts / 24h', value: '—' },
+    { label: 'New alerts / 24h', value: '0' },
   ]
 
   return <Box className="project-overview-content">
     <Box className="project-overview-heading">
       <Typography component="h2" className="project-section-heading">Project Overview</Typography>
-      <Typography className="project-data-source">
-        {loading
-          ? 'Loading OpenAlex data…'
-          : error
-            ? 'OpenAlex data unavailable'
-            : totalTopicCount === 0
-              ? 'OpenAlex · searching by subject area'
-              : `OpenAlex · searching ${includedTopicCount} of ${totalTopicCount} project keywords`}
-      </Typography>
     </Box>
     <Box className="project-metric-grid">
       {metrics.map((metric) => <Paper variant="outlined" className="project-metric-card" key={metric.label}>
@@ -265,59 +263,51 @@ function OverviewContent({
     <Box className="project-chart-grid">
       <Paper variant="outlined" className="project-chart-card publication-trend-card">
         <Typography component="h3">Publication Trend</Typography>
-        <Typography className="project-card-description">Annual works matching this project’s keywords</Typography>
+        <Typography className="project-card-description">Related publications over time</Typography>
         {loading
-          ? <OverviewLoadingState />
+          ? <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="Waiting for publication data" description="Related publication trends will appear here." />
           : error
             ? <OverviewErrorState message={error} onRetry={onRetry} />
             : data?.years.length
               ? <PublicationTrendChart years={data.years} />
-              : <EmptyState icon={<ChartBarIcon width={25} height={25} />} title="No matching publications" description="Try broader project keywords." />}
+              : <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="Waiting for publication data" description="Related publication trends will appear here." />}
       </Paper>
       <Paper variant="outlined" className="project-chart-card subject-distribution-card">
         <Typography component="h3">Subject Area Distribution</Typography>
-        <Typography className="project-card-description">Top areas in the returned works sample</Typography>
+        <Typography className="project-card-description">Publications by research field</Typography>
         {loading
-          ? <OverviewLoadingState />
+          ? <EmptyState icon={<ClockIcon width={28} height={28} />} title="No distribution data" description="Subject area breakdown will appear here." />
           : error
             ? <EmptyState icon={<ClockIcon width={23} height={23} />} title="Distribution unavailable" description="Retry the OpenAlex search to load this chart." />
-            : data?.subjects.length
-              ? <SubjectAreaChart items={data.subjects} sampleSize={data.subjects.reduce((sum, item) => sum + item.count, 0)} />
-              : <EmptyState icon={<ClockIcon width={23} height={23} />} title="No subject data" description="OpenAlex did not return subject areas for this sample." />}
+            : data?.totalWorks && data.subjects.length
+              ? <SubjectAreaChart items={data.subjects} />
+              : <EmptyState icon={<ClockIcon width={28} height={28} />} title="No distribution data" description="Subject area breakdown will appear here." />}
       </Paper>
     </Box>
     <Box className="project-summary-grid">
       <Paper variant="outlined" className="project-chart-card publication-type-card">
         <Typography component="h3">Publication Type Distribution</Typography>
-        <Typography className="project-card-description">Works matching this project’s keywords</Typography>
+        <Typography className="project-card-description">Journal, conference and other sources</Typography>
         {loading
-          ? <OverviewLoadingState />
+          ? <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="No publication data" description="Publication type trends will appear here." />
           : error
             ? <EmptyState icon={<ChartBarIcon width={24} height={24} />} title="Type data unavailable" description="Retry the OpenAlex search to load this chart." />
-            : data?.types.length
-              ? <DistributionBars items={data.types} />
-              : <EmptyState icon={<ChartBarIcon width={24} height={24} />} title="No publication data" description="No matching works were returned." />}
+            : data?.totalWorks && data.types.some((item) => item.count > 0)
+              ? <PublicationTypeChart items={data.types} />
+              : <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="No publication data" description="Publication type trends will appear here." />}
       </Paper>
       <Paper variant="outlined" className="project-chart-card monitoring-summary-card">
         <Typography component="h3">Monitoring Summary</Typography>
-        <SummaryRow label="Unique journals in sample" value={loading ? '…' : error ? '—' : String(data?.sourceCount ?? 0)} />
-        <SummaryRow label="Works in sample" value={loading ? '…' : error ? '—' : String(data?.sampleSize ?? 0)} />
-        <SummaryRow label="Data fetched" value={loading ? '…' : error ? '—' : data ? new Date(data.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'} />
-        <SummaryRow label="Alerts" value="Not enabled" />
+        <SummaryRow label="Total journals" value={loading ? '0' : error ? '—' : String(data?.sourceCount ?? 0)} />
+        <SummaryRow label="Last updated" value={data ? new Date(data.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not available'} />
+        <SummaryRow label="New alerts" value="0" />
       </Paper>
     </Box>
   </Box>
 }
 
 function formatWorkCount(count: number) {
-  return count >= 10_000 ? `${new Intl.NumberFormat('en-US').format(count)}+` : new Intl.NumberFormat('en-US').format(count)
-}
-
-function OverviewLoadingState() {
-  return <Box className="project-overview-loading" role="status">
-    <CircularProgress size={18} />
-    <Typography>Loading OpenAlex results…</Typography>
-  </Box>
+  return new Intl.NumberFormat('en-US').format(count)
 }
 
 function OverviewErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
@@ -328,66 +318,90 @@ function OverviewErrorState({ message, onRetry }: { message: string; onRetry: ()
 }
 
 function PublicationTrendChart({ years }: { years: ProjectOverviewData['years'] }) {
-  const width = 640
-  const height = 150
+  const width = 662
+  const height = 168
   const maxCount = Math.max(...years.map((item) => item.count), 1)
+  const tickMax = Math.max(15, Math.ceil(maxCount / 15) * 15)
+  const ticks = [tickMax, tickMax * 0.75, tickMax * 0.5, tickMax * 0.25, 0]
+  const plotLeft = 36
+  const plotRight = 650
+  const plotTop = 20
+  const plotBottom = 138
   const points = years.map((item, index) => ({
     ...item,
-    x: years.length === 1 ? width / 2 : 24 + (index / (years.length - 1)) * (width - 48),
-    y: height - 20 - (item.count / maxCount) * (height - 44),
+    x: years.length === 1 ? (plotLeft + plotRight) / 2 : plotLeft + (index / (years.length - 1)) * (plotRight - plotLeft),
+    y: plotBottom - (item.count / tickMax) * (plotBottom - plotTop),
   }))
 
   return <Box className="publication-trend-chart">
     <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Publication counts by year">
-      {[0, 1, 2, 3].map((line) => {
-        const y = 14 + (line / 3) * (height - 34)
-        return <line key={line} x1="18" x2={width - 18} y1={y} y2={y} className="publication-trend-gridline" />
+      {ticks.map((tick, index) => {
+        const y = plotTop + (index / (ticks.length - 1)) * (plotBottom - plotTop)
+        return <g key={tick}>
+          <text x="4" y={y + 3} className="publication-trend-axis-label">{Math.round(tick)}</text>
+          <line x1={plotLeft} x2={plotRight} y1={y} y2={y} className="publication-trend-gridline" />
+        </g>
       })}
       <polyline points={points.map((point) => `${point.x},${point.y}`).join(' ')} className="publication-trend-line" />
       {points.map((point) => <circle key={point.year} cx={point.x} cy={point.y} r="4" className="publication-trend-point"><title>{`${point.year}: ${new Intl.NumberFormat('en-US').format(point.count)} works`}</title></circle>)}
+      {points.map((point) => <text key={point.year} x={point.x} y="162" textAnchor="middle" className="publication-trend-year-label">{point.year}</text>)}
     </svg>
-    <Box className="publication-trend-years">
-      {points.map((point) => <Typography key={point.year}>{point.year}</Typography>)}
-    </Box>
   </Box>
 }
 
-const subjectChartColors = ['#0879c9', '#50a5dc', '#44a276', '#e7a43b', '#8a75c4']
+const subjectChartColors = ['#2563eb', '#e8793b', '#3e8e4e', '#e5b54a']
+const publicationTypeColors = ['#2563eb', '#3e8e4e', '#e8793b']
 
-function SubjectAreaChart({ items, sampleSize }: { items: DistributionItem[]; sampleSize: number }) {
+function makeDonutStyle(items: DistributionItem[], colors: string[]) {
   const total = items.reduce((sum, item) => sum + item.count, 0)
-  const colorStops = items.map((item, index) => {
-    const precedingCount = items.slice(0, index).reduce((sum, precedingItem) => sum + precedingItem.count, 0)
-    const start = total ? (precedingCount / total) * 100 : 0
-    const end = total ? ((precedingCount + item.count) / total) * 100 : 100
-    return `${subjectChartColors[index % subjectChartColors.length]} ${start}% ${end}%`
+  const nonZeroItems = items.map((item, index) => ({ item, index })).filter(({ item }) => item.count > 0)
+  const gap = nonZeroItems.length ? 0.55 : 0
+  const totalGap = gap * nonZeroItems.length
+  const available = 100 - totalGap
+  let cursor = 0
+  const colorStops = nonZeroItems.flatMap(({ item, index }) => {
+    const start = cursor
+    const end = start + (item.count / total) * available
+    cursor = end + gap
+    return [`${colors[index % colors.length]} ${start}% ${end}%`, `#ffffff ${end}% ${cursor}%`]
   })
-  const chartStyle = { background: `conic-gradient(${colorStops.join(', ')})` }
+  return { background: `conic-gradient(${colorStops.join(', ')})` }
+}
 
-  return <Box className="subject-area-chart">
-    <Box className="subject-donut" style={chartStyle} role="img" aria-label={`Subject areas across ${sampleSize} returned works`}>
-      <Box className="subject-donut-center"><strong>{sampleSize}</strong><span>works</span></Box>
-    </Box>
-    <Box className="subject-area-legend">
-      {items.map((item, index) => <Box className="subject-area-legend-item" key={item.label}>
-        <span style={{ background: subjectChartColors[index % subjectChartColors.length] }} />
-        <Typography title={item.label}>{item.label}</Typography>
-        <strong>{item.count}</strong>
-      </Box>)}
-    </Box>
+function Donut({ items, colors, className, centerLabel }: {
+  items: DistributionItem[]
+  colors: string[]
+  className: string
+  centerLabel?: string
+}) {
+  return <Box className={className} style={makeDonutStyle(items, colors)} aria-hidden="true">
+    <Box className="donut-hole">{centerLabel && <span>{centerLabel}</span>}</Box>
   </Box>
 }
 
-function DistributionBars({ items }: { items: DistributionItem[] }) {
-  const maxCount = Math.max(...items.map((item) => item.count), 1)
-  return <Box className="project-distribution-bars">
-    {items.map((item) => <Box className="project-distribution-item" key={item.label}>
-      <Box className="project-distribution-label">
-        <Typography title={item.label}>{item.label.replace(/[-_]/g, ' ')}</Typography>
-        <strong>{new Intl.NumberFormat('en-US').format(item.count)}</strong>
-      </Box>
-      <Box className="project-distribution-track"><span style={{ width: `${Math.max(3, (item.count / maxCount) * 100)}%` }} /></Box>
+function Legend({ items, colors }: { items: DistributionItem[]; colors: string[] }) {
+  const total = items.reduce((sum, item) => sum + item.count, 0)
+
+  return <Box className="distribution-legend">
+    {items.map((item, index) => <Box className="distribution-legend-row" key={item.label}>
+      <span className="distribution-legend-dot" style={{ background: colors[index % colors.length] }} />
+      <Typography title={item.label}>{item.label}</Typography>
+      <span className="distribution-legend-share">{total ? `${Math.round(item.count / total * 100)}%` : '0%'}</span>
     </Box>)}
+  </Box>
+}
+
+function SubjectAreaChart({ items }: { items: DistributionItem[] }) {
+  return <Box className="subject-area-chart">
+    <Legend items={items} colors={subjectChartColors} />
+    <Donut items={items} colors={subjectChartColors} className="subject-donut" centerLabel="100%" />
+  </Box>
+}
+
+function PublicationTypeChart({ items }: { items: DistributionItem[] }) {
+  return <Box className="publication-type-chart">
+    <Legend items={items} colors={publicationTypeColors} />
+    <Donut items={items} colors={publicationTypeColors} className="publication-type-donut" />
   </Box>
 }
 
