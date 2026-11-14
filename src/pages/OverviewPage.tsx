@@ -27,7 +27,7 @@ type RecordItem = {
 }
 
 type FilterOption = { label: string; value: string; count: string }
-type FilterGroup = { title: string; key: string; options: FilterOption[] }
+type FilterGroup = { title: string; key: string; options: FilterOption[]; allOptions: FilterOption[] }
 type FilterDefinition = { title: string; label: string; key: string; lookupEntity?: FilterValueEntity; searchPlaceholder?: string }
 type FacetState = { key: string; facets: Record<string, WorkerFacet[]> }
 
@@ -123,9 +123,9 @@ function makeFilterGroups(
       ?? { label: value, value, count: '' }
     ))
     const selectedValuesSet = new Set(selected.map((option) => option.value))
-    const options = [...selected, ...facetOptions.filter((option) => !selectedValuesSet.has(option.value))]
-      .slice(0, optionLimit)
-    return { title, key, options }
+    const allOptions = [...selected, ...facetOptions.filter((option) => !selectedValuesSet.has(option.value))]
+    const options = allOptions.slice(0, optionLimit)
+    return { title, key, options, allOptions }
   })
 }
 
@@ -368,13 +368,24 @@ function FilterMenu({ definition, options, selected, selectedLabels, selectedFil
     </Popover>
   </>
 }
-function FilterCard({ group, selected, onToggle, loading, error }: {
+function FilterCard({ group, selected, onToggle, onApply, loading, error }: {
   group: FilterGroup
   selected: Set<string>
   onToggle: (key: string, value: string, option?: FilterOption) => void
+  onApply: (key: string, values: string[], options: FilterOption[]) => void
   loading: boolean
   error: boolean
 }) {
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+  const [draftValues, setDraftValues] = useState<Set<string>>(new Set())
+  const [searchTerm, setSearchTerm] = useState('')
+  const open = Boolean(anchorEl)
+  const visibleMoreOptions = group.allOptions.filter((option) => option.label.toLocaleLowerCase().includes(searchTerm.trim().toLocaleLowerCase()))
+  const closeMore = () => {
+    setAnchorEl(null)
+    setSearchTerm('')
+  }
+
   return <Paper variant="outlined" className="filter-card">
     <Box className="filter-card-title-row">
       <Typography component="h3">{group.title}</Typography>
@@ -396,6 +407,59 @@ function FilterCard({ group, selected, onToggle, loading, error }: {
         </label>
       })}
     </Box>
+    {!loading && !error && group.allOptions.length > group.options.length && <Button
+      className="filter-card-more"
+      type="button"
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      onClick={(event) => {
+        setDraftValues(new Set(selectedValues(selected, group.key)))
+        setSearchTerm('')
+        setAnchorEl(event.currentTarget)
+      }}
+    >More...</Button>}
+    <Popover
+      open={open}
+      anchorEl={anchorEl}
+      onClose={closeMore}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      slotProps={{ paper: { className: 'filter-menu-paper filter-menu-paper-searchable', role: 'dialog', 'aria-label': `More ${group.title} filters` } }}
+    >
+      <Box className="filter-menu-search">
+        <MagnifyingGlassIcon width={15} height={15} aria-hidden="true" />
+        <InputBase
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder={group.title}
+          inputProps={{ 'aria-label': `Search ${group.title.toLowerCase()} values` }}
+          autoFocus
+        />
+      </Box>
+      <Box className="filter-menu-options">
+        {visibleMoreOptions.length === 0 ? <Typography className="filter-menu-status">No options found.</Typography>
+          : visibleMoreOptions.map((option) => <label className="filter-menu-option" key={option.value}>
+            <Checkbox
+              size="small"
+              checked={draftValues.has(option.value)}
+              onChange={() => setDraftValues((current) => {
+                const next = new Set(current)
+                if (next.has(option.value)) next.delete(option.value)
+                else next.add(option.value)
+                return next
+              })}
+              slotProps={{ input: { 'aria-label': option.label } }}
+              sx={{ p: 0, color: '#727a83', '&.Mui-checked': { color: '#0879c9' } }}
+            />
+            <span className="filter-menu-option-label" title={option.label}>{option.label}</span>
+            <span className="filter-menu-option-count">{option.count}</span>
+          </label>)}
+      </Box>
+      <Box className="filter-menu-actions">
+        <Button type="button" onClick={closeMore}>Cancel</Button>
+        <Button type="button" variant="contained" onClick={() => { onApply(group.key, [...draftValues], group.allOptions); closeMore() }}>Apply</Button>
+      </Box>
+    </Popover>
   </Paper>
 }
 
@@ -628,7 +692,7 @@ export function OverviewPage() {
       <Typography className="search-empty-footnote">Your results and filters will appear here after searching.</Typography>
     </Paper> : <Box className="results-workspace">
       <Box className="filter-column" style={{ gridTemplateRows: 'repeat(' + filterGroups.length + ', minmax(0, 1fr))' }}>
-        {filterGroups.map((group) => <FilterCard group={group} key={group.title} selected={selectedFilters} onToggle={toggleFilter} loading={filterGroupsLoading} error={filterGroupsError} />)}
+        {filterGroups.map((group) => <FilterCard group={group} key={group.title} selected={selectedFilters} onToggle={toggleFilter} onApply={applyFilter} loading={filterGroupsLoading} error={filterGroupsError} />)}
       </Box>
       <Paper variant="outlined" className="results-panel">
         <Box className="results-toolbar">
