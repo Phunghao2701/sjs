@@ -12,7 +12,7 @@ const colorTokens: ColorToken[] = [
   { name: '--muted', value: '#626972', usage: 'Mô tả và chữ phụ' },
   { name: '--soft-muted', value: '#69717a', usage: 'Metadata nhẹ trên nền sáng' },
   { name: '--stroke', value: '#e2e5e9', usage: 'Viền card và control' },
-  { name: '--hover', value: '#f0f2f5', usage: 'Nền hover và mục đang chọn' },
+  { name: '--hover', value: '#F5F5F5', usage: 'Nền hover và mục đang chọn' },
   { name: '--brand', value: '#0879c9', usage: 'Hành động chính và link' },
   { name: '--brand-hover', value: '#0669af', usage: 'Nền hover của hành động chính' },
 ]
