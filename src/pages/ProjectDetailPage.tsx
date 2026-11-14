@@ -8,7 +8,7 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 import type { LocalProject, ProjectTab } from '../types/project'
-import { searchResearch, type WorkerFacet, type WorkerWork } from '../services/workerApi'
+import { getProjectOverview, type WorkerProjectOverview } from '../services/workerApi'
 
 const projectTabs: { label: string; value: ProjectTab }[] = [
   { label: 'Overview', value: 'overview' },
@@ -35,7 +35,8 @@ type ProjectOverviewData = {
   years: { year: number; count: number }[]
   types: DistributionItem[]
   subjects: DistributionItem[]
-  sourceCount: number
+  journalCount: number
+  journalCountComplete: boolean
   growthRate: number | null
   updatedAt: string
 }
@@ -58,54 +59,16 @@ function buildProjectSearch(topics: string[], subject: string) {
   return { query }
 }
 
-function buildProjectOverview(
-  totalWorks: number,
-  facets: Record<string, WorkerFacet[]>,
-  items: WorkerWork[],
-): ProjectOverviewData {
-  const currentYear = new Date().getFullYear()
-  const yearCounts = (facets.publication_year ?? [])
-    .map((facet) => ({ year: Number(facet.value), count: facet.count }))
-    .filter((item) => Number.isInteger(item.year) && item.year >= 1900 && item.year <= currentYear)
-    .sort((left, right) => left.year - right.year)
-  const years = yearCounts.slice(-5)
-  const previousYearCount = yearCounts.find((item) => item.year === currentYear - 2)?.count
-  const latestCompleteYearCount = yearCounts.find((item) => item.year === currentYear - 1)?.count
-  const growthRate = previousYearCount && latestCompleteYearCount !== undefined
-    ? ((latestCompleteYearCount - previousYearCount) / previousYearCount) * 100
-    : null
-
-  const subjectCounts = new Map<string, number>()
-  const sourceNames = new Set<string>()
-  const typeCounts = new Map<string, number>([['Journal', 0], ['Conference', 0], ['Other', 0]])
-  for (const work of items) {
-    const subject = work.subject_area?.name?.trim()
-    if (subject) subjectCounts.set(subject, (subjectCounts.get(subject) ?? 0) + 1)
-    if (work.journal_name) sourceNames.add(work.journal_name)
-  }
-  for (const facet of facets.type ?? []) {
-    const type = facet.label.toLocaleLowerCase()
-    const group = /conference|proceed/.test(type)
-      ? 'Conference'
-      : /article|review|journal/.test(type)
-        ? 'Journal'
-        : 'Other'
-    typeCounts.set(group, (typeCounts.get(group) ?? 0) + facet.count)
-  }
-  const sortedSubjects = [...subjectCounts]
-    .map(([label, count]) => ({ label, count }))
-    .sort((left, right) => right.count - left.count)
-  const topSubjects = sortedSubjects.slice(0, 3)
-  const otherSubjectCount = sortedSubjects.slice(3).reduce((sum, item) => sum + item.count, 0)
-
+function buildProjectOverview(overview: WorkerProjectOverview): ProjectOverviewData {
   return {
-    totalWorks,
-    years,
-    types: [...typeCounts].map(([label, count]) => ({ label, count })),
-    subjects: otherSubjectCount > 0 ? [...topSubjects, { label: 'Others', count: otherSubjectCount }] : topSubjects,
-    sourceCount: sourceNames.size,
-    growthRate,
-    updatedAt: new Date().toISOString(),
+    totalWorks: overview.total_works,
+    years: overview.years,
+    types: overview.source_types,
+    subjects: overview.subject_areas,
+    journalCount: overview.journal_count,
+    journalCountComplete: overview.journal_count_complete,
+    growthRate: overview.growth_rate,
+    updatedAt: overview.updated_at,
   }
 }
 
@@ -127,19 +90,12 @@ export function ProjectDetailPage({ project, activeTab, onTabChange }: ProjectDe
 
   useEffect(() => {
     const controller = new AbortController()
-    searchResearch('Works', {
-      query: projectSearch.query,
-      page: 1,
-      limit: 100,
-      sortBy: 'publication_year',
-      sortOrder: 'desc',
-      include_facets: 1,
-    }, controller.signal)
+    getProjectOverview(projectSearch.query, controller.signal)
       .then((result) => {
         setOverviewRequest({
           key: overviewRequestKey,
           status: 'success',
-          data: buildProjectOverview(result.total, result.facets, result.items as WorkerWork[]),
+          data: buildProjectOverview(result),
         })
       })
       .catch((error: unknown) => {
@@ -293,12 +249,15 @@ function OverviewContent({
           : error
             ? <EmptyState icon={<ChartBarIcon width={24} height={24} />} title="Type data unavailable" description="Retry the OpenAlex search to load this chart." />
             : data?.totalWorks && data.types.some((item) => item.count > 0)
-              ? <PublicationTypeChart items={data.types} />
+              ? <PublicationTypeChart items={data.types.filter((item) => item.count > 0)} />
               : <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="No publication data" description="Publication type trends will appear here." />}
       </Paper>
       <Paper variant="outlined" className="project-chart-card monitoring-summary-card">
         <Typography component="h3">Monitoring Summary</Typography>
-        <SummaryRow label="Total journals" value={loading ? '0' : error ? '—' : String(data?.sourceCount ?? 0)} />
+        <SummaryRow
+          label="Total journals"
+          value={loading ? '0' : error ? '—' : data ? `${formatWorkCount(data.journalCount)}${data.journalCountComplete ? '' : '+'}` : '0'}
+        />
         <SummaryRow label="Last updated" value={data ? new Date(data.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not available'} />
         <SummaryRow label="New alerts" value="0" />
       </Paper>
@@ -361,7 +320,7 @@ function formatTrendTick(value: number) {
 }
 
 const subjectChartColors = ['#2563eb', '#e8793b', '#3e8e4e', '#e5b54a']
-const publicationTypeColors = ['#2563eb', '#3e8e4e', '#e8793b']
+const publicationTypeColors = ['#2563eb', '#3e8e4e', '#e8793b', '#9aa1aa']
 
 function makeDonutStyle(items: DistributionItem[], colors: string[]) {
   const total = items.reduce((sum, item) => sum + item.count, 0)
