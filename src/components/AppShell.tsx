@@ -2,18 +2,28 @@ import type { ReactNode } from 'react'
 import { Box, IconButton, InputBase, Tooltip } from '@mui/material'
 import { BellIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline'
 import type { AppPage } from '../App'
+import type { LocalProject, ProjectTab } from '../types/project'
 import { Sidebar } from './Sidebar'
 
 type AppShellProps = {
   activePage: AppPage
+  activeProject: LocalProject | null
+  projectTab: ProjectTab
   onNavigate: (page: AppPage) => void
+  onProjectTabChange: (tab: ProjectTab) => void
   children: ReactNode
 }
 
-export function AppShell({ activePage, onNavigate, children }: AppShellProps) {
+export function AppShell({ activePage, activeProject, projectTab, onNavigate, onProjectTabChange, children }: AppShellProps) {
   return (
     <Box className="app-shell">
-      <Sidebar activePage={activePage} onNavigate={onNavigate} />
+      <Sidebar
+        activePage={activePage}
+        activeProject={activeProject}
+        projectTab={projectTab}
+        onNavigate={onNavigate}
+        onProjectTabChange={onProjectTabChange}
+      />
       <Box component="main" className="main-shell">
         <Box component="header" className="topbar">
           <Box className="topbar-spacer" />

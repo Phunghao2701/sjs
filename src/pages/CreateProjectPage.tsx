@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Box, Button, FormControl, FormControlLabel, IconButton, InputBase, Paper, Popover, Radio, RadioGroup, TextField, Typography } from '@mui/material'
 import { CheckIcon, ChevronDownIcon, MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { getSubjectAreas, searchKeywords, type WorkerKeyword, type WorkerSubjectArea } from '../services/workerApi'
+import type { LocalProject } from '../types/project'
 
 type RecentProject = { name: string; subject: string; topics: string[] }
 
-export function CreateProjectPage() {
+export function CreateProjectPage({ onProjectCreate }: { onProjectCreate: (project: LocalProject) => void }) {
   const [projectName, setProjectName] = useState('')
   const [subjectId, setSubjectId] = useState('')
   const [subjectOptions, setSubjectOptions] = useState<WorkerSubjectArea[]>([])
@@ -92,10 +93,18 @@ export function CreateProjectPage() {
   const createProject = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!canCreate) return
-    setRecentProjects((current) => [{ name: projectName.trim(), subject, topics: selectedKeywords }, ...current].slice(0, 3))
+    const createdProject: LocalProject = {
+      id: `project-${Date.now()}`,
+      name: projectName.trim(),
+      subjectAreaId: subjectId,
+      subject,
+      topics: [...selectedKeywords],
+    }
+    setRecentProjects((current) => [{ name: createdProject.name, subject, topics: selectedKeywords }, ...current].slice(0, 3))
     setCreatedMessage('Project created in this demo.')
     setProjectName('')
     setSelectedKeywords([])
+    onProjectCreate(createdProject)
   }
 
   const retrySubjects = () => {
