@@ -3,7 +3,6 @@ import { Box, Button, Checkbox, FormControl, IconButton, InputBase, MenuItem, Pa
 import { ArrowDownTrayIcon, BuildingOffice2Icon, DocumentTextIcon, EllipsisVerticalIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline'
 import {
   getCountries,
-  getInstitutionOptions,
   searchResearch,
   type ResearchEntity,
   type ResearchSearchParams,
@@ -213,15 +212,13 @@ export function OverviewPage() {
   const [completedRequestKey, setCompletedRequestKey] = useState('')
   const [searchFailure, setSearchFailure] = useState<{ key: string; message: string } | null>(null)
   const [countries, setCountries] = useState<WorkerCountry[]>([])
-  const [institutions, setInstitutions] = useState<WorkerInstitution[]>([])
-  const [catalogOptionsLoading, setCatalogOptionsLoading] = useState(true)
   const [facetState, setFacetState] = useState<FacetState>({ key: '', facets: emptyFacets })
   const facetCache = useRef<FacetState | null>(null)
 
-  const countryOptions = useMemo(() => countries.map((item) => ({ label: item.name, value: item.zone_id })), [countries])
-  const institutionOptions = useMemo(() => institutions.map((item) => ({ label: item.name, value: item.id })), [institutions])
   const facetKey = JSON.stringify([entity, submittedQuery])
   const visibleFacets = facetState.key === facetKey ? facetState.facets : emptyFacets
+  const countryOptions = useMemo(() => (visibleFacets.country_code ?? []).map(({ label, value }) => ({ label, value })), [visibleFacets])
+  const institutionOptions = useMemo(() => (visibleFacets.institution_id ?? []).map(({ label, value }) => ({ label, value })), [visibleFacets])
   const filterGroups = useMemo(() => makeFilterGroups(entity, visibleFacets), [entity, visibleFacets])
   const requestKey = JSON.stringify({
     query: submittedQuery,
@@ -236,24 +233,18 @@ export function OverviewPage() {
   const searchError = searchFailure?.key === requestKey ? searchFailure.message : ''
   const loading = Boolean(submittedQuery) && completedRequestKey !== requestKey && !searchError
   const filterGroupsLoading = Boolean(submittedQuery) && facetState.key !== facetKey && !searchError
+  const quickFiltersDisabled = !submittedQuery || filterGroupsLoading || Boolean(searchError)
   const sortOptions = entity === 'Works'
     ? [{ value: 'cited_by_count', label: 'Most citations' }, { value: 'publication_year', label: 'Most recent' }, { value: 'title', label: 'Title' }]
     : [{ value: 'works_count', label: 'Most works' }, { value: 'cited_by_count', label: 'Most citations' }]
 
   useEffect(() => {
     const controller = new AbortController()
-    Promise.all([getCountries(controller.signal), getInstitutionOptions(controller.signal)])
-      .then(([countryItems, institutionItems]) => {
-        setCountries(countryItems.sort((left, right) => left.name.localeCompare(right.name)))
-        setInstitutions(institutionItems as WorkerInstitution[])
-      })
+    getCountries(controller.signal)
+      .then((countryItems) => setCountries(countryItems.sort((left, right) => left.name.localeCompare(right.name))))
       .catch(() => {
-        if (!controller.signal.aborted) {
-          setCountries([])
-          setInstitutions([])
-        }
+        if (!controller.signal.aborted) setCountries([])
       })
-      .finally(() => { if (!controller.signal.aborted) setCatalogOptionsLoading(false) })
     return () => controller.abort()
   }, [])
 
@@ -305,12 +296,16 @@ export function OverviewPage() {
     setSubmittedQuery(trimmedQuery)
     setRequestVersion((version) => version + 1)
     setSelectedFilters(new Set())
+    setInstitution('')
+    setCountry('')
   }
 
   const changeEntity = (nextEntity: ResearchEntity) => {
     setEntity(nextEntity)
     setSortBy(defaultSort[nextEntity])
     setSelectedFilters(new Set())
+    setInstitution('')
+    setCountry('')
   }
 
   const toggleFilter = (key: string, value: string) => setSelectedFilters((current) => {
@@ -334,8 +329,8 @@ export function OverviewPage() {
         <Tooltip title="Search"><IconButton type="submit" aria-label="Search" className="query-submit-button"><MagnifyingGlassIcon width={18} height={18} /></IconButton></Tooltip>
       </Box>
       <Box className="quick-filters">
-        <QuickFilter value={institution} onChange={setInstitution} label="Institution" options={institutionOptions} disabled={catalogOptionsLoading || entity === 'Institutions'} />
-        <QuickFilter value={country} onChange={setCountry} label="Country" options={countryOptions} disabled={catalogOptionsLoading} />
+        <QuickFilter value={institution} onChange={setInstitution} label="Institution" options={institutionOptions} disabled={quickFiltersDisabled || entity === 'Institutions' || institutionOptions.length === 0} />
+        <QuickFilter value={country} onChange={setCountry} label="Country" options={countryOptions} disabled={quickFiltersDisabled || countryOptions.length === 0} />
         <Button className="more-filters-button" type="button">More filters</Button>
       </Box>
     </Box>

@@ -150,11 +150,6 @@ export async function searchResearch(entity: ResearchEntity, params: ResearchSea
   }
 }
 
-export async function getInstitutionOptions(signal?: AbortSignal) {
-  const response = await searchResearch('Institutions', { query: 'university', page: 1, limit: 50, sortBy: 'works_count', sortOrder: 'desc' }, signal)
-  return response.items
-}
-
 export async function getCountries(signal?: AbortSignal) {
   const response = await getJson<{ source: string; items: WorkerCountry[] }>('/api/v1/catalog/countries', {}, signal)
   return response.items ?? []
