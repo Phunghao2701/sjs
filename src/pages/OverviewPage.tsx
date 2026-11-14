@@ -185,11 +185,12 @@ function EntitySelect({ value, onChange }: { value: ResearchEntity; onChange: (v
   </FormControl>
 }
 
-function FilterMenu({ definition, options, selected, selectedLabels, onApply, loading, error }: {
+function FilterMenu({ definition, options, selected, selectedLabels, selectedFilters, onApply, loading, error }: {
   definition: FilterDefinition
   options: FilterOption[]
   selected: string[]
   selectedLabels: Record<string, FilterOption>
+  selectedFilters: Set<string>
   onApply: (key: string, values: string[], options: FilterOption[]) => void
   loading: boolean
   error: boolean
@@ -202,6 +203,14 @@ function FilterMenu({ definition, options, selected, selectedLabels, onApply, lo
   const [searchError, setSearchError] = useState(false)
   const open = Boolean(anchorEl)
   const normalizedSearch = searchTerm.trim()
+  const lookupFilterParams = useMemo<Record<string, string>>(() => {
+    const filters: Record<string, string> = {}
+    if (definition.lookupEntity === 'institutions') {
+      const countryCodes = selectedValues(selectedFilters, 'country_code')
+      if (countryCodes.length > 0) filters.country_code = countryCodes.join('|')
+    }
+    return filters
+  }, [definition.lookupEntity, selectedFilters])
   const pluralLabels: Record<string, string> = {
     country_code: 'countries',
     institution_id: 'institutions',
@@ -212,16 +221,18 @@ function FilterMenu({ definition, options, selected, selectedLabels, onApply, lo
     topic_id: 'topics',
     publisher_id: 'publishers',
   }
-  const selectionLabel = selected.length === 1
-    ? selectedLabels[`${definition.key}:${selected[0]}`]?.label ?? definition.label
-    : `${selected.length} ${pluralLabels[definition.key] ?? 'selected'}`
+  const selectionLabel = selected.length === 0
+    ? definition.label
+    : selected.length === 1
+      ? selectedLabels[`${definition.key}:${selected[0]}`]?.label ?? definition.label
+      : `${selected.length} ${pluralLabels[definition.key] ?? 'selected'}`
 
   useEffect(() => {
     if (!open || !definition.lookupEntity || !normalizedSearch) return
 
     const controller = new AbortController()
     const timeout = window.setTimeout(() => {
-      searchFilterValues(definition.lookupEntity!, normalizedSearch, controller.signal)
+      searchFilterValues(definition.lookupEntity!, normalizedSearch, lookupFilterParams, controller.signal)
         .then((values: WorkerFilterValue[]) => {
           if (!controller.signal.aborted) setSearchResults(values.map((item) => ({ label: item.label, value: item.value, count: formatCount(item.count) })))
         })
@@ -240,7 +251,7 @@ function FilterMenu({ definition, options, selected, selectedLabels, onApply, lo
       window.clearTimeout(timeout)
       controller.abort()
     }
-  }, [open, definition.lookupEntity, normalizedSearch])
+  }, [open, definition.lookupEntity, normalizedSearch, lookupFilterParams])
 
   const filteredOptions = useMemo(() => {
     if (definition.lookupEntity && normalizedSearch) return searchResults ?? []
@@ -406,14 +417,20 @@ export function OverviewPage() {
   const [facetState, setFacetState] = useState<FacetState>({ key: '', facets: emptyFacets })
   const facetCache = useRef<FacetState | null>(null)
 
-  const facetKey = JSON.stringify([entity, submittedQuery])
+  const facetKey = JSON.stringify([entity, submittedQuery, [...selectedFilters].sort()])
   const visibleFacets = facetState.key === facetKey ? facetState.facets : emptyFacets
   const countryCounts = useMemo(() => new Map((visibleFacets.country_code ?? []).map((item) => [item.value, item.count])), [visibleFacets])
-  const countryOptions = useMemo(() => countries.map((country) => ({
-    label: country.name,
-    value: country.zone_id,
-    count: formatCount(countryCounts.get(country.zone_id) ?? 0),
-  })), [countries, countryCounts])
+  const countryOptions = useMemo(() => {
+    const selectedCountries = new Set(selectedValues(selectedFilters, 'country_code'))
+    const hasOtherFilters = [...selectedFilters].some((item) => !item.startsWith('country_code:'))
+    return countries
+      .filter((country) => !hasOtherFilters || countryCounts.has(country.zone_id) || selectedCountries.has(country.zone_id))
+      .map((country) => ({
+        label: country.name,
+        value: country.zone_id,
+        count: formatCount(countryCounts.get(country.zone_id) ?? 0),
+      }))
+  }, [countries, countryCounts, selectedFilters])
   const filterGroups = useMemo(
     () => makeFilterGroups(entity, visibleFacets, selectedFilters, filterOptionLabels),
     [entity, visibleFacets, selectedFilters, filterOptionLabels],
@@ -508,7 +525,7 @@ export function OverviewPage() {
 
   const changeEntity = (nextEntity: ResearchEntity) => {
     if (nextEntity === entity) return
-    const nextFacetKey = JSON.stringify([nextEntity, submittedQuery])
+    const nextFacetKey = JSON.stringify([nextEntity, submittedQuery, []])
     const cachedFacets = facetCache.current?.key === nextFacetKey ? facetCache.current : null
     setEntity(nextEntity)
     setSortBy(defaultSort[nextEntity])
@@ -578,6 +595,7 @@ export function OverviewPage() {
             options={optionsFor(definition)}
             selected={selected}
             selectedLabels={filterOptionLabels}
+            selectedFilters={selectedFilters}
             onApply={applyFilter}
             loading={filterGroupsLoading || (definition.key === 'country_code' && countriesLoading)}
             error={filterGroupsError || (definition.key === 'country_code' && countriesError)}

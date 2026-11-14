@@ -176,10 +176,10 @@ export async function searchResearch(entity: ResearchEntity, params: ResearchSea
   }
 }
 
-export async function searchFilterValues(entity: FilterValueEntity, query: string, signal?: AbortSignal) {
+export async function searchFilterValues(entity: FilterValueEntity, query: string, filters: Record<string, string> = {}, signal?: AbortSignal) {
   const response = await getJson<WorkerEnvelope<WorkerFilterValue[]>>(
     '/api/v1/catalog/filter-values',
-    { entity, query, limit: 10 },
+    { entity, query, limit: 10, ...filters },
     signal,
   )
   return unwrap(response)
