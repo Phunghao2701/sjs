@@ -7,6 +7,7 @@ export const researchPulseTheme = createTheme({
     primary: { main: '#0879c9', dark: '#0669af', light: '#eaf5fc' },
     background: { default: '#fbfbfb', paper: '#ffffff' },
     text: { primary: '#171a1e', secondary: '#626972' },
+    action: { hover: '#F5F5F5', selected: '#F5F5F5' },
     divider: '#e2e5e9',
   },
   typography: {

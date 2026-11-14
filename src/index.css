@@ -39,8 +39,9 @@ input:focus-visible,
   outline-offset: 0;
 }
 
-.MuiButtonBase-root:focus-visible:not(.MuiButton-outlined):not(.subject-area-trigger):not(.MuiRadio-root):not(.MuiCheckbox-root) { box-shadow: inset 0 0 0 1px var(--muted) !important; }
-.MuiButton-outlined:focus-visible, .subject-area-trigger.MuiButton-root:focus-visible { border-color: var(--muted) !important; background-color: var(--surface) !important; box-shadow: none !important; }
+.MuiButtonBase-root:focus-visible:not(.MuiButton-outlined):not(.subject-area-trigger):not(.MuiRadio-root):not(.MuiCheckbox-root):not(.quick-filter-trigger) { box-shadow: inset 0 0 0 1px var(--muted) !important; }
+.MuiButton-outlined:focus-visible:not(.quick-filter-trigger), .subject-area-trigger.MuiButton-root:focus-visible { border-color: var(--muted) !important; background-color: var(--surface) !important; box-shadow: none !important; }
+.MuiMenuItem-root.Mui-selected, .MuiMenuItem-root.Mui-selected:hover { background-color: var(--hover) !important; }
 .MuiRadio-root.Mui-focusVisible, .MuiCheckbox-root.Mui-focusVisible { color: var(--muted); background: transparent; }
 a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted); }
 .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline { border-color: var(--muted) !important; border-width: 1px !important; }
@@ -301,9 +302,11 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 .quick-filter-chip.is-selected { max-width: 268px; border-color: #08090a; background: #08090a; }
 .quick-filter-chip.is-selected .quick-filter-trigger { min-width: 0 !important; max-width: 238px; flex: 1 1 auto; justify-content: flex-start !important; padding-right: 2px !important; color: #fff !important; font-weight: 500 !important; }
 .quick-filter-chip.is-selected .quick-filter-trigger:hover { background: transparent !important; color: #fff !important; }
+.quick-filter-trigger.MuiButtonBase-root:focus-visible { border-color: transparent !important; background: transparent !important; box-shadow: none !important; }
 .quick-filter-clear { width: 28px; height: 30px; flex: 0 0 28px; margin-right: 2px; color: #fff !important; border-radius: 0 5px 5px 0 !important; }
 .quick-filter-clear:hover { background: rgba(255,255,255,.12) !important; }
-.quick-filter-chip:focus-within { border-color: var(--muted); box-shadow: none; }
+.quick-filter-chip:focus-within { border-color: var(--stroke); box-shadow: none; }
+.quick-filter-chip.is-selected:focus-within { border-color: #08090a; }
 .research-search .MuiInputBase-root::before, .research-search .MuiInputBase-root::after { display: none; }
 .filter-menu-paper { display: flex; max-height: min(390px, calc(100dvh - 24px)); flex-direction: column; overflow: hidden; border: 1px solid #e2e5e9; border-radius: 8px !important; box-shadow: 0 8px 24px rgba(23,26,30,.12) !important; }
 .filter-menu-paper-searchable { width: min(410px, calc(100vw - 24px)); }
@@ -406,8 +409,8 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 .results-footer .MuiPagination-root { flex: 0 0 auto; }
 .results-footer .MuiPagination-ul { flex-wrap: nowrap; }
 .results-footer .MuiPaginationItem-root { min-width: 25px; height: 25px; margin: 0 1px; color: #626972; font-size: 11px; }
-.results-footer .MuiPaginationItem-root.Mui-selected { color: #0879c9; background: #eaf4fb; }
-.results-footer .MuiPaginationItem-root.Mui-selected:hover { background: #dceef9; }
+.results-footer .MuiPaginationItem-root.Mui-selected { color: #0879c9; background: var(--hover); }
+.results-footer .MuiPaginationItem-root.Mui-selected:hover { background: var(--hover); }
 
 /* Create project */
 .create-project-page {
@@ -457,7 +460,7 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 .subject-area-options .MuiRadioGroup-root { gap: 1px; }
 .subject-area-option.MuiFormControlLabel-root { width: 100%; min-height: 32px; margin: 0; padding: 0 6px; border-radius: 4px; cursor: pointer; }
 .subject-area-option.MuiFormControlLabel-root:hover { background: var(--hover); }
-.subject-area-option.MuiFormControlLabel-root.is-selected { background: #edf6fc; }
+.subject-area-option.MuiFormControlLabel-root.is-selected { background: var(--hover); }
 .subject-area-option .MuiRadio-root { padding: 5px; color: #727a83; }
 .subject-area-option .MuiRadio-root.Mui-checked { color: #0879c9; }
 .subject-area-option .MuiFormControlLabel-label { color: #252a2f; font-size: 12px; line-height: 1.35; }
@@ -475,7 +478,7 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 .recent-projects-empty p:last-child { max-width: 280px; margin: 0; color: #7a828a; font-size: 12px; }
 .recent-project-list { display: flex; min-height: 0; flex-direction: column; margin-top: 10px; }
 .recent-project-row { display: flex; min-height: 56px; align-items: center; gap: 10px; border-top: 1px solid #edf0f2; color: #0879c9; }
-.recent-project-mark { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; border-radius: 7px; color: #0879c9; background: #edf6fc; font-size: 12px; font-weight: 600; }
+.recent-project-mark { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; border-radius: 7px; color: #0879c9; background: var(--hover); font-size: 12px; font-weight: 600; }
 .recent-project-copy { min-width: 0; flex: 1; }
 .recent-project-copy p:first-child { overflow: hidden; color: #252a2f; font-size: 12px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .recent-project-copy p:last-child { color: #858c95; font-size: 10.5px; }
@@ -497,7 +500,7 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 .keyword-row:hover { background: #f8f9fa; }
 .keyword-row p { overflow: hidden; color: #252a2f; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .keyword-add { width: 28px; height: 28px; color: #626972 !important; }
-.keyword-add:hover { background: #edf6fc !important; color: #0879c9 !important; }
+.keyword-add:hover { background: var(--hover) !important; color: #626972 !important; }
 .keyword-add.is-selected { color: #0879c9 !important; }
 .no-keywords { padding: 10px 4px; color: #858c95; font-size: 12px !important; }
 .keyword-help { min-height: 27px; display: flex; align-items: flex-end; margin-top: auto !important; padding-top: 9px; border-top: 1px solid #e2e5e9; color: #747c85; font-size: 11px !important; }

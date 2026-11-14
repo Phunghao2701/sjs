@@ -79,7 +79,7 @@
 .ds-list-row.MuiListItemButton-root { display: flex; min-height: 40px; justify-content: space-between; gap: 12px; padding: 7px 10px; border-bottom: 1px solid var(--stroke-soft); color: var(--ink-secondary); font-size: 12px; }
 .ds-list-row.MuiListItemButton-root:last-child { border-bottom: 0; }
 .ds-list-row.MuiListItemButton-root:hover, .ds-list-row-hover.MuiListItemButton-root { background: var(--hover); color: var(--ink-secondary); }
-.ds-list-row.Mui-selected, .ds-list-row.Mui-selected:hover { background: var(--hover); color: var(--ink-secondary); }
+.ds-list-row.Mui-selected, .ds-list-row.Mui-selected:hover { background: var(--hover) !important; color: var(--ink-secondary); }
 .ds-list-row.Mui-disabled { color: var(--soft-muted); }
 .ds-dialog-frame { position: relative; min-height: 224px; overflow: hidden; border: 1px solid var(--stroke); border-radius: var(--radius-card); background: var(--surface); }
 .ds-dialog-root.MuiDialog-root { position: absolute; inset: 0; z-index: 1; }
