@@ -333,20 +333,31 @@ function PublicationTrendChart({ years }: { years: ProjectOverviewData['years'] 
     y: plotBottom - (item.count / tickMax) * (plotBottom - plotTop),
   }))
 
-  return <Box className="publication-trend-chart">
-    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Publication counts by year">
+  return <Box className="publication-trend-chart" role="img" aria-label="Publication counts by year">
+    <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
       {ticks.map((tick, index) => {
         const y = plotTop + (index / (ticks.length - 1)) * (plotBottom - plotTop)
-        return <g key={tick}>
-          <text x="4" y={y + 3} className="publication-trend-axis-label">{Math.round(tick)}</text>
-          <line x1={plotLeft} x2={plotRight} y1={y} y2={y} className="publication-trend-gridline" />
-        </g>
+        return <line key={tick} x1={plotLeft} x2={plotRight} y1={y} y2={y} className="publication-trend-gridline" />
       })}
       <polyline points={points.map((point) => `${point.x},${point.y}`).join(' ')} className="publication-trend-line" />
-      {points.map((point) => <circle key={point.year} cx={point.x} cy={point.y} r="4" className="publication-trend-point"><title>{`${point.year}: ${new Intl.NumberFormat('en-US').format(point.count)} works`}</title></circle>)}
-      {points.map((point) => <text key={point.year} x={point.x} y="162" textAnchor="middle" className="publication-trend-year-label">{point.year}</text>)}
     </svg>
+    {ticks.map((tick, index) => {
+      const y = plotTop + (index / (ticks.length - 1)) * (plotBottom - plotTop)
+      return <span key={tick} className="publication-trend-axis-label" style={{ top: `${y / height * 100}%` }} aria-hidden="true">
+        {formatTrendTick(tick)}
+      </span>
+    })}
+    {points.map((point) => <span key={point.year} className="publication-trend-year-label" style={{ left: `${point.x / width * 100}%` }} aria-hidden="true">
+      {point.year}
+    </span>)}
+    {points.map((point) => <span key={point.year} className="publication-trend-point" style={{ left: `${point.x / width * 100}%`, top: `${point.y / height * 100}%` }} aria-hidden="true" />)}
   </Box>
+}
+
+function formatTrendTick(value: number) {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1).replace(/\.0$/, '')}k`
+  return new Intl.NumberFormat('en-US').format(Math.round(value))
 }
 
 const subjectChartColors = ['#2563eb', '#e8793b', '#3e8e4e', '#e5b54a']
