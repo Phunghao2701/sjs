@@ -60,6 +60,29 @@ export type WorkerInstitution = {
   region: string
 }
 
+export type WorkerSource = {
+  id: string
+  journal_id: string
+  name: string
+  display_name: string
+  type: string
+  publisher_name: string
+  country_code: string
+  is_open_access: boolean
+  works_count: number
+  cited_by_count: number
+  metric_value: number
+  metric_name: string
+  subject_area_name: string
+  subject_category_name: string
+}
+
+export type WorkerFilterValue = {
+  value: string
+  label: string
+  count: number
+}
+
 export type WorkerCountry = {
   zone_id: string
   name: string
@@ -80,7 +103,8 @@ export type WorkerKeyword = {
   works_count: number
 }
 
-export type ResearchEntity = 'Authors' | 'Works' | 'Institutions'
+export type ResearchEntity = 'Authors' | 'Works' | 'Institutions' | 'Sources'
+export type FilterValueEntity = 'institutions' | 'topics' | 'publishers'
 
 export type ResearchSearchParams = {
   query: string
@@ -94,6 +118,8 @@ export type ResearchSearchParams = {
   publication_year?: string
   type?: string
   is_open_access?: string
+  topic_id?: string
+  publisher_id?: string
   include_facets?: number
 }
 
@@ -137,7 +163,7 @@ function unwrap<T>(response: WorkerEnvelope<T>): T {
 }
 
 export async function searchResearch(entity: ResearchEntity, params: ResearchSearchParams, signal?: AbortSignal) {
-  const response = await getJson<WorkerEnvelope<Array<WorkerAuthor | WorkerWork | WorkerInstitution>>>(
+  const response = await getJson<WorkerEnvelope<Array<WorkerAuthor | WorkerWork | WorkerInstitution | WorkerSource>>>(
     '/api/v1/search',
     { ...params, entity: entity.toLowerCase() },
     signal,
@@ -148,6 +174,15 @@ export async function searchResearch(entity: ResearchEntity, params: ResearchSea
     total: response.total ?? response.pagination?.total ?? 0,
     facets: response.facets ?? {},
   }
+}
+
+export async function searchFilterValues(entity: FilterValueEntity, query: string, signal?: AbortSignal) {
+  const response = await getJson<WorkerEnvelope<WorkerFilterValue[]>>(
+    '/api/v1/catalog/filter-values',
+    { entity, query, limit: 10 },
+    signal,
+  )
+  return unwrap(response)
 }
 
 export async function getCountries(signal?: AbortSignal) {
