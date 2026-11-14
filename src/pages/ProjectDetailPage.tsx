@@ -200,8 +200,8 @@ function OverviewContent({
 }) {
   const growthRate = data?.growthRate
   const metrics = [
-    { label: 'Related articles', value: loading ? '0' : error ? '—' : data ? formatWorkCount(data.totalWorks) : '0' },
-    { label: 'Growth rate', value: growthRate === null || growthRate === undefined ? '—' : `${growthRate >= 0 ? '+' : ''}${growthRate.toFixed(1)}%` },
+    { label: 'Related articles', value: loading || error ? '—' : data ? formatWorkCount(data.totalWorks) : '0' },
+    { label: 'Growth rate', value: loading || error || growthRate === null || growthRate === undefined ? '—' : `${growthRate >= 0 ? '+' : ''}${growthRate.toFixed(1)}%` },
     { label: 'Tracked keywords', value: String(topics.length) },
     { label: 'New alerts / 24h', value: '0' },
   ]
@@ -221,7 +221,7 @@ function OverviewContent({
         <Typography component="h3">Publication Trend</Typography>
         <Typography className="project-card-description">Related publications over time</Typography>
         {loading
-          ? <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="Waiting for publication data" description="Related publication trends will appear here." />
+          ? <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="Loading project data" description="Fetching publication metrics from OpenAlex." />
           : error
             ? <OverviewErrorState message={error} onRetry={onRetry} />
             : data?.years.length
@@ -232,9 +232,9 @@ function OverviewContent({
         <Typography component="h3">Subject Area Distribution</Typography>
         <Typography className="project-card-description">Publications by research field</Typography>
         {loading
-          ? <EmptyState icon={<ClockIcon width={28} height={28} />} title="No distribution data" description="Subject area breakdown will appear here." />
+          ? <EmptyState icon={<ClockIcon width={28} height={28} />} title="Loading distribution" description="Subject area breakdown will appear here." />
           : error
-            ? <EmptyState icon={<ClockIcon width={23} height={23} />} title="Distribution unavailable" description="Retry the OpenAlex search to load this chart." />
+            ? <EmptyState icon={<ClockIcon width={23} height={23} />} title="Distribution unavailable" description={error} />
             : data?.totalWorks && data.subjects.length
               ? <SubjectAreaChart items={data.subjects} />
               : <EmptyState icon={<ClockIcon width={28} height={28} />} title="No distribution data" description="Subject area breakdown will appear here." />}
@@ -245,9 +245,9 @@ function OverviewContent({
         <Typography component="h3">Publication Type Distribution</Typography>
         <Typography className="project-card-description">Journal, conference and other sources</Typography>
         {loading
-          ? <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="No publication data" description="Publication type trends will appear here." />
+          ? <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="Loading distribution" description="Publication type trends will appear here." />
           : error
-            ? <EmptyState icon={<ChartBarIcon width={24} height={24} />} title="Type data unavailable" description="Retry the OpenAlex search to load this chart." />
+            ? <EmptyState icon={<ChartBarIcon width={24} height={24} />} title="Type data unavailable" description={error} />
             : data?.totalWorks && data.types.some((item) => item.count > 0)
               ? <PublicationTypeChart items={data.types.filter((item) => item.count > 0)} />
               : <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="No publication data" description="Publication type trends will appear here." />}
@@ -256,9 +256,9 @@ function OverviewContent({
         <Typography component="h3">Monitoring Summary</Typography>
         <SummaryRow
           label="Total journals"
-          value={loading ? '0' : error ? '—' : data ? `${formatWorkCount(data.journalCount)}${data.journalCountComplete ? '' : '+'}` : '0'}
+          value={loading || error ? '—' : data ? `${formatWorkCount(data.journalCount)}${data.journalCountComplete ? '' : '+'}` : '0'}
         />
-        <SummaryRow label="Last updated" value={data ? new Date(data.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not available'} />
+        <SummaryRow label="Last updated" value={loading ? 'Loading…' : data ? new Date(data.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not available'} />
         <SummaryRow label="New alerts" value="0" />
       </Paper>
     </Box>
