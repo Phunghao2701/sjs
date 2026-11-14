@@ -50,6 +50,8 @@
 .ds-button.MuiButton-root { min-height: 36px; padding: 0 12px; border-radius: 6px; box-shadow: none; font-size: 14px; font-weight: 500; text-transform: none; transition: background-color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease); }
 .ds-outline.MuiButton-root { border-color: var(--stroke); background: var(--surface); color: var(--ink-secondary); }
 .ds-outline.MuiButton-root:hover, .ds-forced-state[data-demo-state='hover'] .ds-outline.MuiButton-root { border-color: var(--stroke); background: var(--hover); }
+.ds-forced-state[data-demo-state='focus'] .ds-outline.MuiButton-root,
+.ds-forced-state[data-demo-state='focus'] .ds-outline.MuiButton-root:hover { border-color: var(--muted); background: var(--surface); box-shadow: none; }
 .ds-primary.MuiButton-root { background: var(--brand); color: #fff; }
 .ds-primary.MuiButton-root:hover { background: var(--brand-hover); box-shadow: none; }
 .ds-secondary.MuiButton-root { background: var(--surface); color: var(--ink); }
@@ -65,7 +67,6 @@
 .ds-input-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
 .ds-input-grid .MuiTextField-root .MuiOutlinedInput-root { min-height: 40px; border-radius: var(--radius-control); background: var(--surface); font-size: 13px; }
 .ds-input-grid .MuiTextField-root .MuiOutlinedInput-notchedOutline { border-color: var(--stroke); }
-.ds-input-grid .MuiTextField-root .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline { border-color: var(--brand); border-width: 1px; }
 .ds-input-grid .MuiTextField-root .MuiInputBase-input { padding: 9px 11px; }
 .ds-input-grid .MuiTextField-root .MuiFormHelperText-root { margin: 4px 0 0; font-size: 11px; }
 .ds-example-card.MuiPaper-root { min-height: 78px; padding: 13px; border-color: var(--stroke); border-radius: var(--radius-card); box-shadow: none; transition: background-color var(--motion-fast) var(--motion-ease); }

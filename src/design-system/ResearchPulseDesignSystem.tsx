@@ -13,7 +13,7 @@ const colorTokens: ColorToken[] = [
   { name: '--soft-muted', value: '#69717a', usage: 'Metadata nhẹ trên nền sáng' },
   { name: '--stroke', value: '#e2e5e9', usage: 'Viền card và control' },
   { name: '--hover', value: '#f0f2f5', usage: 'Nền hover và mục đang chọn' },
-  { name: '--brand', value: '#0879c9', usage: 'Hành động chính, link và focus' },
+  { name: '--brand', value: '#0879c9', usage: 'Hành động chính và link' },
   { name: '--brand-hover', value: '#0669af', usage: 'Nền hover của hành động chính' },
 ]
 
@@ -137,9 +137,9 @@ export function ResearchPulseDesignSystem() {
             </div>
           </div>
           <div className="ds-demo-block">
-            <StateLabel>Rê · khóa</StateLabel>
+            <StateLabel>Focus · khóa</StateLabel>
             <div className="ds-button-row">
-              <div className="ds-forced-state" data-demo-state="hover" inert><Button variant="outlined" className="ds-button ds-outline">Rê chuột</Button></div>
+              <div className="ds-forced-state" data-demo-state="focus" inert><Button variant="outlined" className="ds-button ds-outline">Focus bàn phím</Button></div>
               <Button variant="outlined" className="ds-button" disabled>Đang khóa</Button>
             </div>
           </div>
@@ -157,7 +157,7 @@ export function ResearchPulseDesignSystem() {
           </div>
         </Section>
 
-        <Section id="inputs" title="Ô nhập" description="Cao 40px trên desktop, viền mảnh; focus dùng vòng xanh dễ thấy.">
+        <Section id="inputs" title="Ô nhập" description="Cao 40px trên desktop; khi focus, viền hiện hữu đổi sang màu muted.">
           <div className="ds-input-grid">
             <div className="ds-demo-block"><StateLabel>Thường</StateLabel><TextField size="small" fullWidth placeholder="Nhập từ khóa nghiên cứu" /></div>
             <div className="ds-demo-block ds-forced-state" data-demo-state="focus" inert><StateLabel>Đang focus</StateLabel><TextField size="small" fullWidth focused defaultValue="Machine learning" /></div>

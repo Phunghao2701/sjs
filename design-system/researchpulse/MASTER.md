@@ -22,7 +22,7 @@ Status: preview prepared for review.
 | `--soft-muted` | `#69717a` | Low emphasis metadata on light surfaces |
 | `--stroke` | `#e2e5e9` | Main borders |
 | `--stroke-soft` | `#e7e9ed` | Dividers |
-| `--brand` | `#0879c9` | Primary action, link, focus |
+| `--brand` | `#0879c9` | Primary action and links |
 | `--brand-hover` | `#0669af` | Primary action hover |
 | `--hover` | `#f0f2f5` | Hover and neutral selected surface |
 
@@ -55,7 +55,7 @@ Use Inter with system fallbacks. Do not add a second typeface.
 
 1. **Button:** outline, primary, secondary, and ghost. Default height 36px in MUI; 14px label. Surface buttons stay white; primary is reserved for the main action. No icon unless the approved Figma design specifies one.
 2. **Status badge:** compact text label with a semantic tint; no decorative icon.
-3. **Input:** 40px default height, 1px border, 7px radius, blue visible focus, and a clearly associated error message. Search bars and create-project form fields keep their Figma-specific 49px and 44px heights.
+3. **Input:** 40px default height, 1px border, 7px radius; on focus, the existing border changes to `--muted` without an outer ring. Search bars and create-project form fields keep their Figma-specific 49px and 44px heights.
 4. **Card:** white surface, 1px border, 9px radius, no shadow.
 5. **List row:** at least 40px high, content may increase height, 1px separators, neutral hover background; hover does not recolor text.
 6. **Dialog:** MUI Dialog, up to 560px wide, actions aligned right; close through Escape or its cancel action. Backdrop click follows MUI's default unless a future flow explicitly needs a dirty-state guard.
