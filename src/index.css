@@ -1,7 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import './design-system/tokens.css';
 
 :root {
-  font-family: Inter, 'Segoe UI', Arial, sans-serif;
+  font-family: var(--font-family-sans);
   color: #171a1e;
   background: #fbfbfb;
   font-synthesis: none;
@@ -10,17 +11,6 @@
   -moz-osx-font-smoothing: grayscale;
   font-optical-sizing: auto;
   font-weight: 400;
-  --app-bg: #fbfbfb;
-  --surface: #ffffff;
-  --sidebar-bg: #f8f9fa;
-  --ink: #171a1e;
-  --muted: #626972;
-  --soft-muted: #969da6;
-  --stroke: #e2e5e9;
-  --stroke-soft: #e7e9ed;
-  --brand: #0879c9;
-  --brand-soft: #eaf5fc;
-  --hover: #f0f2f5;
 }
 
 * { box-sizing: border-box; }

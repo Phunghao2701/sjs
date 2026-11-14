@@ -1,40 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material'
+import { CssBaseline, ThemeProvider } from '@mui/material'
 import { onAuthStateChanged } from 'firebase/auth'
 import { AppShell } from './components/AppShell'
 import { PageTransition } from './components/PageTransition'
+import { ResearchPulseDesignSystem } from './design-system/ResearchPulseDesignSystem'
 import { CreateProjectPage } from './pages/CreateProjectPage'
 import { OverviewPage } from './pages/OverviewPage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import type { LocalProject, ProjectTab } from './types/project'
 import { auth, ensureDevelopmentEmulatorUser, firebaseConfigured, firebaseEmulatorsEnabled } from './services/firebase'
 import { createProjectInFirestore, listMyProjects, type NewProject } from './services/projectStore'
+import { researchPulseTheme } from './theme'
 
 export type AppPage = 'overview' | 'create-project' | 'project-detail'
 
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: { main: '#0879c9', dark: '#0568ad', light: '#eaf5fc' },
-    background: { default: '#fbfbfb', paper: '#ffffff' },
-    text: { primary: '#171a1e', secondary: '#626972' },
-    divider: '#e2e5e9',
-  },
-  typography: {
-    fontFamily: 'Inter, "Segoe UI", Arial, sans-serif',
-    button: { fontSize: 14, fontWeight: 500, textTransform: 'none' },
-  },
-  shape: { borderRadius: 7 },
-  components: {
-    MuiButton: {
-      defaultProps: { disableElevation: true },
-      styleOverrides: { root: { minHeight: 36, borderRadius: 7 } },
-    },
-    MuiPaper: { styleOverrides: { rounded: { borderRadius: 9 } } },
-  },
-})
-
 export default function App() {
+  if (window.location.pathname.replace(/\/$/, '') === '/design-system') {
+    return (
+      <ThemeProvider theme={researchPulseTheme}>
+        <CssBaseline />
+        <ResearchPulseDesignSystem />
+      </ThemeProvider>
+    )
+  }
+
+  return <ResearchPulseApp />
+}
+
+function ResearchPulseApp() {
   const [activePage, setActivePage] = useState<AppPage>('overview')
   const [activeProject, setActiveProject] = useState<LocalProject | null>(null)
   const [projects, setProjects] = useState<LocalProject[]>([])
@@ -127,7 +120,7 @@ export default function App() {
     : authError || (userId ? 'Projects save to Firestore.' : 'Sign in to save projects.')
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={researchPulseTheme}>
       <CssBaseline />
       <AppShell
         activePage={activePage}
