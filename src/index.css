@@ -294,10 +294,12 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 .quick-filters { position: absolute; top: 168px; left: 50%; display: flex; width: min(100%, 919px); min-width: 0; align-items: center; justify-content: flex-start; gap: 8px; transform: translateX(-50%); }
 .quick-filter-chip { display: flex; width: auto; height: 32px; flex: 0 0 auto; align-items: center; padding: 0; border: 1px solid #e2e5e9; border-radius: 7px; background: #fff; }
 .quick-filter-trigger { display: flex !important; min-width: 86px !important; max-width: 240px; height: 30px; justify-content: space-between !important; gap: 10px; padding: 0 9px !important; color: #171a1e !important; font-size: 12px !important; font-weight: 400 !important; line-height: 1 !important; text-align: left; text-transform: none !important; white-space: nowrap; }
+.quick-filter-trigger:hover { background: var(--hover) !important; color: #171a1e !important; }
 .quick-filter-summary { overflow: hidden; text-overflow: ellipsis; }
 .quick-filter-trigger svg { flex: 0 0 auto; color: #626972; }
 .quick-filter-chip.is-selected { max-width: 268px; border-color: #08090a; background: #08090a; }
 .quick-filter-chip.is-selected .quick-filter-trigger { min-width: 0 !important; max-width: 238px; flex: 1 1 auto; justify-content: flex-start !important; padding-right: 2px !important; color: #fff !important; font-weight: 500 !important; }
+.quick-filter-chip.is-selected .quick-filter-trigger:hover { background: #08090a !important; color: #fff !important; }
 .quick-filter-clear { width: 28px; height: 30px; flex: 0 0 28px; margin-right: 2px; color: #fff !important; border-radius: 0 5px 5px 0 !important; }
 .quick-filter-clear:hover { background: rgba(255,255,255,.12) !important; }
 .quick-filter-chip:focus-within { border-color: var(--muted); box-shadow: none; }

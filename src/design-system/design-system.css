@@ -67,6 +67,7 @@
 .ds-input-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
 .ds-input-grid .MuiTextField-root .MuiOutlinedInput-root { min-height: 40px; border-radius: var(--radius-control); background: var(--surface); font-size: 13px; }
 .ds-input-grid .MuiTextField-root .MuiOutlinedInput-notchedOutline { border-color: var(--stroke); }
+.ds-input-grid .MuiTextField-root .MuiOutlinedInput-root:not(.Mui-disabled):not(.Mui-focused):hover .MuiOutlinedInput-notchedOutline { border-color: var(--stroke); }
 .ds-input-grid .MuiTextField-root .MuiInputBase-input { padding: 9px 11px; }
 .ds-input-grid .MuiTextField-root .MuiFormHelperText-root { margin: 4px 0 0; font-size: 11px; }
 .ds-example-card.MuiPaper-root { min-height: 78px; padding: 13px; border-color: var(--stroke); border-radius: var(--radius-card); box-shadow: none; transition: background-color var(--motion-fast) var(--motion-ease); }
