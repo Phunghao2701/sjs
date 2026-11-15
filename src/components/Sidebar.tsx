@@ -34,7 +34,7 @@ const projectSections: { label: string; value: ProjectTab }[] = [
 ]
 
 export function Sidebar({ activePage, activeProject, projects, projectTab, onNavigate, onProjectOpen }: SidebarProps) {
-  const [projectOpen, setProjectOpen] = useState(() => !window.matchMedia('(max-width: 620px)').matches)
+  const [projectOpen, setProjectOpen] = useState(false)
   const projectPageActive = activePage === 'project-detail'
 
   return (
