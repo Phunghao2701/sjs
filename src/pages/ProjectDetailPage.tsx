@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Box, Button, ButtonBase, IconButton, InputBase, MenuItem, Paper, Select, Typography } from '@mui/material'
 import {
   ChartBarIcon,
@@ -73,6 +73,7 @@ function buildProjectOverview(overview: WorkerProjectOverview): ProjectOverviewD
 }
 
 export function ProjectDetailPage({ project, activeTab, onTabChange }: ProjectDetailPageProps) {
+  const projectTabsRef = useRef<HTMLElement | null>(null)
   const [publicationQuery, setPublicationQuery] = useState('')
   const [publicationYear, setPublicationYear] = useState('All years')
   const [trackedTopics, setTrackedTopics] = useState(project.topics)
@@ -111,6 +112,20 @@ export function ProjectDetailPage({ project, activeTab, onTabChange }: ProjectDe
     return () => controller.abort()
   }, [overviewRequestKey, projectSearch.query])
 
+  useEffect(() => {
+    const tabs = projectTabsRef.current
+    const currentTab = tabs?.querySelector<HTMLElement>('[aria-current="page"]')
+    if (!tabs || !currentTab) return
+
+    const tabsBounds = tabs.getBoundingClientRect()
+    const currentTabBounds = currentTab.getBoundingClientRect()
+    if (currentTabBounds.left < tabsBounds.left) {
+      tabs.scrollLeft -= tabsBounds.left - currentTabBounds.left
+    } else if (currentTabBounds.right > tabsBounds.right) {
+      tabs.scrollLeft += currentTabBounds.right - tabsBounds.right
+    }
+  }, [activeTab])
+
   const visiblePublications = useMemo(() => {
     const query = publicationQuery.trim().toLocaleLowerCase()
     return publications.filter((publication) => {
@@ -144,7 +159,7 @@ export function ProjectDetailPage({ project, activeTab, onTabChange }: ProjectDe
         <Typography className="project-detail-description">Monitor scientific publications and research topics.</Typography>
       </Box>
 
-      <Box component="nav" className="project-detail-tabs" aria-label="Project sections">
+      <Box ref={projectTabsRef} component="nav" className="project-detail-tabs" aria-label="Project sections">
         {projectTabs.map((tab) => <ButtonBase
           key={tab.value}
           className={`project-detail-tab${activeTab === tab.value ? ' is-active' : ''}`}

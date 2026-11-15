@@ -487,6 +487,7 @@ export function OverviewPage() {
   const [resultMenuAnchor, setResultMenuAnchor] = useState<HTMLElement | null>(null)
   const [pageSizeMenuAnchor, setPageSizeMenuAnchor] = useState<HTMLElement | null>(null)
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [filterOptionLabels, setFilterOptionLabels] = useState<Record<string, FilterOption>>({})
   const [records, setRecords] = useState<RecordItem[]>([])
   const [total, setTotal] = useState(0)
@@ -703,8 +704,22 @@ export function OverviewPage() {
       <Typography className="search-empty-description">Enter a query or choose a research category to start exploring OpenAlex.</Typography>
       <Box className="suggested-entities">{(['Authors', 'Works', 'Institutions'] as ResearchEntity[]).map((item) => { const Icon = entityIcons[item]; return <Button key={item} variant="outlined" onClick={() => changeEntity(item)} className="entity-suggestion"><Icon width={16} height={16} aria-hidden="true" />{item}</Button> })}</Box>
       <Typography className="search-empty-footnote">Your results and filters will appear here after searching.</Typography>
-    </Paper> : <Box className="results-workspace">
-      <Box className="filter-column" style={{ gridTemplateRows: 'repeat(' + filterGroups.length + ', minmax(0, 1fr))' }}>
+    </Paper> : <>
+      <Box className="mobile-filter-controls">
+        <Button
+          variant="outlined"
+          className="mobile-filter-toggle"
+          type="button"
+          aria-expanded={mobileFiltersOpen}
+          aria-controls="search-filter-panel"
+          onClick={() => setMobileFiltersOpen((open) => !open)}
+        >
+          {mobileFiltersOpen ? 'Hide filters' : 'Filters'}
+          {selectedFilters.size > 0 && <span className="mobile-filter-count">{selectedFilters.size}</span>}
+        </Button>
+      </Box>
+      <Box className="results-workspace">
+      <Box id="search-filter-panel" className={`filter-column${mobileFiltersOpen ? ' is-mobile-open' : ''}`} style={{ gridTemplateRows: 'repeat(' + filterGroups.length + ', minmax(0, 1fr))' }}>
         {filterGroups.map((group) => <FilterCard group={group} key={group.title} selected={selectedFilters} onToggle={toggleFilter} onApply={applyFilter} loading={filterGroupsLoading} error={filterGroupsError} />)}
       </Box>
       <Paper variant="outlined" className="results-panel">
@@ -775,6 +790,7 @@ export function OverviewPage() {
           <Pagination count={totalPages} page={currentPage} onChange={(_, nextPage) => setCurrentPage(nextPage)} size="small" siblingCount={0} boundaryCount={1} aria-label="Results pages" />
         </Box>}
       </Paper>
-    </Box>}
+      </Box>
+    </>}
   </Box>
 }
