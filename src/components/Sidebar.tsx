@@ -36,6 +36,9 @@ const projectSections: { label: string; value: ProjectTab }[] = [
 export function Sidebar({ activePage, activeProject, projects, projectTab, onNavigate, onProjectOpen }: SidebarProps) {
   const [projectOpen, setProjectOpen] = useState(false)
   const projectPageActive = activePage === 'project-detail'
+  const closeProjectMenuOnMobile = () => {
+    if (window.matchMedia('(max-width: 620px)').matches) setProjectOpen(false)
+  }
 
   return (
     <Box component="aside" className="sidebar">
@@ -96,7 +99,10 @@ export function Sidebar({ activePage, activeProject, projects, projectTab, onNav
             {projects.map((project) => <Box key={project.id}>
               <ButtonBase
                 className={`nested-nav-link nested-nav-project${activeProject?.id === project.id && projectPageActive ? ' is-active' : ''}`}
-                onClick={() => onProjectOpen(project, 'overview')}
+                onClick={() => {
+                  onProjectOpen(project, 'overview')
+                  closeProjectMenuOnMobile()
+                }}
                 aria-current={activeProject?.id === project.id && projectPageActive && projectTab === 'overview' ? 'page' : undefined}
                 title={project.name}
               >
@@ -106,7 +112,10 @@ export function Sidebar({ activePage, activeProject, projects, projectTab, onNav
                 {projectSections.map((section) => <ButtonBase
                   key={section.value}
                   className={`project-detail-link${projectTab === section.value ? ' is-active' : ''}`}
-                  onClick={() => onProjectOpen(project, section.value)}
+                  onClick={() => {
+                    onProjectOpen(project, section.value)
+                    closeProjectMenuOnMobile()
+                  }}
                   aria-current={projectTab === section.value ? 'page' : undefined}
                 >
                   {section.label}
