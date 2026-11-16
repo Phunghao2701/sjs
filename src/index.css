@@ -750,14 +750,16 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 
 .keyword-monitoring-grid { display: grid; min-width: 0; min-height: 0; grid-template-columns: minmax(260px, 330fr) minmax(0, 774fr); gap: 12px; }
 .watchlist-card h3, .keyword-results-card h3 { font-size: 14px; line-height: 20px; }
-.tracked-keyword-list { display: flex; min-height: 0; max-height: 128px; flex: 0 1 auto; flex-direction: column; overflow: auto; }
-.tracked-keyword-list .project-list-empty { min-height: 48px; }
+.tracked-keyword-list { display: flex; min-height: 0; flex: 1; flex-direction: column; overflow: auto; }
 .tracked-keyword-row { display: flex; min-height: 40px; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px 0 8px; border-bottom: 1px solid #e2e5e9; }
 .tracked-keyword-row p { overflow: hidden; color: #252a2f; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .tracked-keyword-row .MuiIconButton-root { width: 24px; height: 24px; color: #858c95; }
 .tracked-keyword-row .MuiIconButton-root:hover { background: var(--hover); }
-.watchlist-card .keyword-search, .watchlist-card .keyword-list-header { margin-top: 0; }
-.keyword-monitoring-suggestions.keyword-list { overflow: auto; }
+.watchlist-card .keyword-search { margin-top: 0; }
+.keyword-suggestion-popper { z-index: 1300; }
+.keyword-suggestion-paper { display: flex; max-height: 280px; flex-direction: column; overflow: hidden; padding: 13px; border-color: #e2e5e9 !important; border-radius: 7px !important; box-shadow: 0 8px 20px rgb(20 23 26 / 12%) !important; }
+.keyword-suggestion-paper .keyword-list-header { flex: 0 0 auto; margin-top: 0; }
+.keyword-suggestion-list.keyword-list { max-height: 220px; flex: 0 1 auto; overflow: auto; padding-top: 10px; }
 .keyword-results-card .project-card-description { margin-top: -7px; }
 .keyword-result-list { display: flex; min-height: 0; flex: 1; flex-direction: column; overflow: auto; }
 .keyword-result-row { display: flex; min-height: 40px; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px 0 8px; border-bottom: 1px solid #e2e5e9; }
