@@ -3,6 +3,7 @@ import {
   connectAuthEmulator,
   createUserWithEmailAndPassword,
   getAuth,
+  signOut,
   signInWithEmailAndPassword,
   type User,
 } from 'firebase/auth'
@@ -47,7 +48,17 @@ let developmentSignInPromise: Promise<User> | null = null
 
 async function signInOrCreateDevelopmentUser() {
   await auth.authStateReady()
-  if (auth.currentUser) return auth.currentUser
+  const currentUser = auth.currentUser
+  if (currentUser) {
+    try {
+      // Validate the persisted emulator refresh token before Firestore uses it.
+      await currentUser.getIdToken(true)
+      return currentUser
+    } catch (error) {
+      if ((error as { code?: string }).code !== 'auth/invalid-refresh-token') throw error
+      await signOut(auth)
+    }
+  }
 
   const email = import.meta.env.VITE_DEV_AUTH_EMAIL || 'dev@example.test'
   const password = import.meta.env.VITE_DEV_AUTH_PASSWORD || 'dev-password'

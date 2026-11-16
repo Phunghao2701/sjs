@@ -147,6 +147,17 @@ type WorkerEnvelope<T> = {
   facets?: Record<string, WorkerFacet[]>
 } & WorkerErrorPayload
 
+const workerReadCacheTtlMs = 120_000
+const workerReadCache = new Map<string, { expiresAt: number; payload: unknown }>()
+let workerReadCacheGeneration = 0
+
+const cacheableReadPaths = new Set(['/api/v1/search', '/api/v1/keywords'])
+
+export function clearWorkerReadCache() {
+  workerReadCacheGeneration += 1
+  workerReadCache.clear()
+}
+
 function apiUrl(path: string, params: Record<string, string | number | undefined> = {}) {
   const baseUrl = import.meta.env.VITE_WORKER_API_URL?.trim().replace(/\/+$/, '')
   if (!baseUrl) throw new Error('Worker API URL is missing. Set VITE_WORKER_API_URL in .env.local.')
@@ -159,7 +170,23 @@ function apiUrl(path: string, params: Record<string, string | number | undefined
 }
 
 async function getJson<T>(path: string, params: Record<string, string | number | undefined> = {}, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(apiUrl(path, params), {
+  const url = apiUrl(path, params)
+  const shouldCache = cacheableReadPaths.has(path)
+  let cacheKey: string | undefined
+  const requestGeneration = workerReadCacheGeneration
+
+  if (shouldCache) {
+    url.searchParams.sort()
+    cacheKey = url.toString()
+    const cached = workerReadCache.get(cacheKey)
+    if (cached && cached.expiresAt > Date.now()) {
+      if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError')
+      return cached.payload as T
+    }
+    if (cached) workerReadCache.delete(cacheKey)
+  }
+
+  const response = await fetch(url, {
     headers: { Accept: 'application/json' },
     signal,
   })
@@ -168,6 +195,11 @@ async function getJson<T>(path: string, params: Record<string, string | number |
     throw new Error(payload?.message || payload?.error || `Worker request failed (${response.status}).`)
   }
   if (payload.success === false) throw new Error(payload.message || payload.error || 'Worker request failed.')
+
+  if (cacheKey && !signal?.aborted && requestGeneration === workerReadCacheGeneration) {
+    workerReadCache.set(cacheKey, { payload, expiresAt: Date.now() + workerReadCacheTtlMs })
+  }
+
   return payload as T
 }
 
@@ -192,13 +224,37 @@ export async function searchResearch(entity: ResearchEntity, params: ResearchSea
   }
 }
 
-export async function getProjectOverview(query: string, signal?: AbortSignal) {
-  const response = await getJson<WorkerEnvelope<WorkerProjectOverview>>(
-    '/api/v1/projects/overview',
-    { query },
-    signal,
-  )
-  return unwrap(response)
+export async function getProjectOverview(query: string, years: number, signal?: AbortSignal) {
+  try {
+    const response = await getJson<WorkerEnvelope<WorkerProjectOverview>>(
+      '/api/v1/projects/overview',
+      { query, years },
+      signal,
+    )
+    return unwrap(response)
+  } catch (error) {
+    if (error instanceof Error && (error.message === 'not_found' || error.message.includes('(404)'))) {
+      throw new Error('Project analytics are unavailable in this Worker version. Restart or update the SJS Worker, then retry.')
+    }
+    throw error
+  }
+}
+
+export async function exchangeSsoAccessTokenForFirebaseCustomToken(accessToken: string) {
+  const response = await fetch(apiUrl('/api/v1/auth/sso/custom-token'), {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ accessToken }),
+    credentials: 'omit',
+  })
+  const payload = await response.json().catch(() => null) as { customToken?: unknown; error?: unknown } | null
+  if (!response.ok || typeof payload?.customToken !== 'string') {
+    throw new Error(typeof payload?.error === 'string' ? payload.error : `Worker request failed (${response.status}).`)
+  }
+  return payload.customToken
 }
 
 export async function searchFilterValues(entity: FilterValueEntity, query: string, filters: Record<string, string> = {}, signal?: AbortSignal) {

@@ -1,27 +1,32 @@
 import type { ReactNode } from 'react'
 import { Box, IconButton, InputBase, Tooltip } from '@mui/material'
-import { BellIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline'
+import { BellIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import type { AppPage } from '../App'
 import type { LocalProject, ProjectTab } from '../types/project'
 import { Sidebar } from './Sidebar'
+import { AccountMenu } from './AccountMenu'
 
 type AppShellProps = {
   activePage: AppPage
   activeProject: LocalProject | null
   projects: LocalProject[]
+  projectsLoading: boolean
   projectTab: ProjectTab
+  accountEmail: string
   onNavigate: (page: AppPage) => void
   onProjectOpen: (project: LocalProject, tab: ProjectTab) => void
+  onLogout: () => void
   children: ReactNode
 }
 
-export function AppShell({ activePage, activeProject, projects, projectTab, onNavigate, onProjectOpen, children }: AppShellProps) {
+export function AppShell({ activePage, activeProject, projects, projectsLoading, projectTab, accountEmail, onNavigate, onProjectOpen, onLogout, children }: AppShellProps) {
   return (
     <Box className="app-shell">
       <Sidebar
         activePage={activePage}
         activeProject={activeProject}
         projects={projects}
+        projectsLoading={projectsLoading}
         projectTab={projectTab}
         onNavigate={onNavigate}
         onProjectOpen={onProjectOpen}
@@ -42,15 +47,11 @@ export function AppShell({ activePage, activeProject, projects, projectTab, onNa
                 <BellIcon width={19} height={19} />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Researcher account">
-              <IconButton className="topbar-icon-button" aria-label="Researcher account" size="small">
-                <UserIcon width={17} height={17} />
-              </IconButton>
-            </Tooltip>
+            <AccountMenu email={accountEmail} onLogout={onLogout} />
           </Box>
         </Box>
         <Box className="topbar-divider" />
-        <Box className="page-stage">{children}</Box>
+        <Box className={`page-stage${activePage === 'project-detail' ? ' is-project-detail' : ''}`}>{children}</Box>
       </Box>
     </Box>
   )
