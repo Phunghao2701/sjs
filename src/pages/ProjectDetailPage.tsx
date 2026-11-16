@@ -44,6 +44,32 @@ type NewsFeedRequest =
   | { key: string; status: 'success'; works: WorkerWork[]; total: number; pagination?: ApiPagination }
   | { key: string; status: 'error'; message: string }
 
+type KeywordMonitoringResult = { total: number; works: WorkerWork[] }
+type KeywordMonitoringRequest =
+  | { status: 'success'; data: KeywordMonitoringResult }
+  | { status: 'error'; message: string }
+
+const keywordMonitoringCache = new Map<string, { expiresAt: number; data: KeywordMonitoringResult }>()
+const keywordMonitoringCacheTtlMs = 120_000
+
+async function getKeywordMonitoringResult(query: string, signal: AbortSignal): Promise<KeywordMonitoringResult> {
+  const cacheKey = query.trim().toLocaleLowerCase()
+  const cached = keywordMonitoringCache.get(cacheKey)
+  if (cached && cached.expiresAt > Date.now()) return cached.data
+
+  const response = await searchResearch('Works', {
+    query,
+    page: 1,
+    limit: 3,
+    sortBy: 'publication_year',
+    sortOrder: 'desc',
+    include_facets: 0,
+  }, signal)
+  const data = { total: response.total, works: response.items as WorkerWork[] }
+  if (!signal.aborted) keywordMonitoringCache.set(cacheKey, { data, expiresAt: Date.now() + keywordMonitoringCacheTtlMs })
+  return data
+}
+
 function buildProjectSearch(topics: string[], subject: string) {
   const terms = topics.map((topic) => topic.replace(/["\\]/g, '').replace(/\s+/g, ' ').trim()).filter(Boolean)
   const included: string[] = []
@@ -743,6 +769,38 @@ function KeywordContent({
   onAddTopic: () => void
   onRemoveTopic: (topic: string) => void
 }) {
+  const [results, setResults] = useState<Record<string, KeywordMonitoringRequest>>({})
+  const [retryVersion, setRetryVersion] = useState(0)
+  const uniqueTopics = useMemo(() => Array.from(new Set(trackedTopics.map((topic) => topic.trim()).filter(Boolean))), [trackedTopics])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    let nextTopicIndex = 0
+
+    const loadNextTopic = async () => {
+      while (!controller.signal.aborted) {
+        const topic = uniqueTopics[nextTopicIndex]
+        nextTopicIndex += 1
+        if (!topic) return
+
+        try {
+          const data = await getKeywordMonitoringResult(topic, controller.signal)
+          if (!controller.signal.aborted) setResults((current) => ({ ...current, [topic]: { status: 'success', data } }))
+        } catch (error: unknown) {
+          if (!controller.signal.aborted) {
+            setResults((current) => ({
+              ...current,
+              [topic]: { status: 'error', message: error instanceof Error ? error.message : 'Could not load OpenAlex publications.' },
+            }))
+          }
+        }
+      }
+    }
+
+    void Promise.all(Array.from({ length: Math.min(3, uniqueTopics.length) }, () => loadNextTopic()))
+    return () => controller.abort()
+  }, [retryVersion, uniqueTopics])
+
   return <Box className="project-tab-content">
     <Box className="project-tab-intro">
       <Typography component="h2" className="project-section-heading">Keywords &amp; Monitoring</Typography>
@@ -785,13 +843,33 @@ function KeywordContent({
         <Typography component="h3">Keyword Monitoring Results</Typography>
         <Typography className="project-card-description">Publication activity associated with the tracked keywords</Typography>
         <Box className="keyword-result-list">
-          {trackedTopics.length ? trackedTopics.map((topic) => <Paper variant="outlined" className="keyword-result-row" key={topic}>
+          {uniqueTopics.length ? uniqueTopics.map((topic) => {
+            const result = results[topic]
+            const isLoading = !result
+            return <Paper variant="outlined" className="keyword-result-row" key={topic}>
             <Box className="keyword-result-header">
               <Typography>{topic}</Typography>
-              <Box className="project-count-pill">0 matches</Box>
+              <Box className="project-count-pill">
+                {isLoading ? 'Loading…' : result.status === 'error' ? 'Unavailable' : `${formatWorkCount(result.data.total)} matches`}
+              </Box>
             </Box>
-            <Typography className="keyword-result-status">Matched publications</Typography>
-          </Paper>) : <Box className="project-list-empty">Add a keyword to start monitoring publications.</Box>}
+            {isLoading ? <Typography className="keyword-result-status" role="status">Searching OpenAlex…</Typography>
+              : result.status === 'error' ? <Box className="keyword-result-error" role="alert">
+                <Typography className="keyword-result-status">{result.message}</Typography>
+                <Button size="small" variant="outlined" onClick={() => setRetryVersion((version) => version + 1)}>Retry</Button>
+              </Box>
+                : result.data.total === 0 ? <Typography className="keyword-result-status">No OpenAlex publications match this keyword.</Typography>
+                  : <>
+                    <Typography className="keyword-result-status">Recent matching publications</Typography>
+                    <Box className="keyword-result-publications">
+                      {result.data.works.map((work) => <Box className="keyword-result-publication" key={work.id}>
+                        <Typography title={work.title}>{work.title || 'Untitled publication'}</Typography>
+                        <span>{work.publication_year ?? '—'}</span>
+                      </Box>)}
+                    </Box>
+                  </>}
+          </Paper>
+          }) : <Box className="project-list-empty">Add a keyword to start monitoring publications.</Box>}
         </Box>
       </Paper>
     </Box>
