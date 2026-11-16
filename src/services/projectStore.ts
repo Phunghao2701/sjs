@@ -6,6 +6,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  Timestamp,
   updateDoc,
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
@@ -19,13 +20,22 @@ function projectsCollection() {
   return collection(db, 'users', userId, 'projects')
 }
 
+function timestampToMilliseconds(value: unknown) {
+  if (value instanceof Timestamp) return value.toMillis()
+  if (value instanceof Date) return value.getTime()
+  return typeof value === 'number' ? value : undefined
+}
+
 function toLocalProject(id: string, data: Record<string, unknown>): LocalProject {
+  const status = data.status === 'paused' || data.status === 'archived' ? data.status : 'active'
   return {
     id,
     name: typeof data.title === 'string' ? data.title : '',
     subjectAreaId: '',
     subject: typeof data.subjectArea === 'string' ? data.subjectArea : '',
     topics: Array.isArray(data.keywords) ? data.keywords.filter((value): value is string => typeof value === 'string') : [],
+    status,
+    updatedAt: timestampToMilliseconds(data.updatedAt) ?? timestampToMilliseconds(data.createdAt),
   }
 }
 
@@ -45,7 +55,7 @@ export async function createProjectInFirestore(project: NewProject): Promise<Loc
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
-  return { ...project, id: reference.id }
+  return { ...project, id: reference.id, status: 'active', updatedAt: Date.now() }
 }
 
 export async function updateProjectTopicsInFirestore(projectId: string, topics: string[]) {

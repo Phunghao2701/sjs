@@ -628,6 +628,44 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
   .filter-menu-option { min-height: 40px; }
 }
 
+/* All projects */
+.all-projects-page { display: flex; min-width: 0; min-height: 100%; flex-direction: column; gap: 18px; padding: 36px 36px 30px; background: var(--app-bg); }
+.all-projects-heading { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.all-projects-heading h1 { margin: 0 0 4px; color: #171a1e; font-size: 27px; font-weight: 600; line-height: 1.25; }
+.all-projects-description { color: #626972; font-size: 13px !important; line-height: 1.45 !important; }
+.all-projects-create-button.MuiButton-root { min-height: 38px; flex: 0 0 auto; gap: 2px; padding-inline: 14px; }
+.all-projects-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.all-projects-metric-card { display: flex; min-width: 0; min-height: 112px; flex-direction: column; gap: 5px; padding: 16px; border-color: #e2e5e9 !important; border-radius: 9px !important; box-shadow: none !important; }
+.all-projects-metric-card > p:first-child { color: #6b7280; font-size: 12px; }
+.all-projects-metric-card > strong { color: #171a1e; font-size: 24px; font-weight: 600; line-height: 30px; }
+.all-projects-metric-description { color: #858c95; font-size: 11px !important; }
+.all-projects-metric-description-skeleton { transform: none !important; }
+.all-projects-toolbar { display: grid; min-width: 0; grid-template-columns: minmax(220px, 1fr) 150px minmax(180px, 220px) 180px; align-items: center; gap: 12px; padding: 14px; border-color: #e2e5e9 !important; border-radius: 9px !important; box-shadow: none !important; }
+.all-projects-search { display: flex; min-width: 0; height: 40px; align-items: center; gap: 9px; padding: 0 11px; border: 1px solid #dfe2e6; border-radius: 7px; color: #858c95; background: #fff; }
+.all-projects-search:focus-within { border-color: var(--muted); }
+.all-projects-search .MuiInputBase-root { min-width: 0; flex: 1; color: #252a2f; font-size: 12px; }
+.all-projects-search .MuiInputBase-input { padding: 0; }
+.all-projects-search .MuiInputBase-input::placeholder { color: #8c9299; opacity: 1; }
+.all-projects-select.MuiInputBase-root { min-width: 0; height: 40px; border-radius: 7px; color: #343a40; font-size: 12px; }
+.all-projects-select .MuiSelect-select { min-height: 0 !important; overflow: hidden; padding: 9px 30px 9px 11px !important; text-overflow: ellipsis; white-space: nowrap; }
+.all-projects-select .MuiOutlinedInput-notchedOutline { border-color: #dfe2e6; }
+.all-projects-table-card { min-width: 0; overflow: hidden; border-color: #e2e5e9 !important; border-radius: 9px !important; box-shadow: none !important; }
+.all-projects-table-wrap { width: 100%; overflow-x: auto; }
+.all-projects-table { min-width: 760px; }
+.all-projects-table .MuiTableCell-root { padding: 14px 18px; border-bottom-color: #e9ecef; color: #343a40; font-size: 12px; }
+.all-projects-table .MuiTableHead-root .MuiTableCell-root { padding-block: 12px; background: #fafafa; color: #69717a; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.all-projects-table .MuiTableBody-root .MuiTableRow-root:last-child .MuiTableCell-root { border-bottom: 0; }
+.all-projects-table .MuiTableBody-root .MuiTableRow-root:hover { background: #fafafa; }
+.all-projects-name.MuiButton-root { min-height: 0; justify-content: flex-start; padding: 0; color: #0879c9; font-size: 13px; font-weight: 600; text-align: left; text-transform: none; }
+.all-projects-name.MuiButton-root:hover { background: transparent; color: #0669af; }
+.all-project-status { display: inline-flex; min-height: 23px; align-items: center; padding: 0 9px; border-radius: 12px; color: #626972; background: #f5f5f5; font-size: 10px; font-weight: 500; white-space: nowrap; }
+.all-project-status.is-active { color: #25845b; background: #e9f6ef; }
+.all-project-status.is-paused { color: #8a6414; background: #fff4d6; }
+.all-project-status.is-archived { color: #6b7280; background: #f1f2f4; }
+.all-projects-message { display: flex; min-height: 260px; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; }
+.all-projects-message > p:first-child { color: #252a2f; font-size: 14px; font-weight: 500; }
+.all-projects-message-description { color: #858c95; font-size: 12px !important; }
+
 /* Project detail */
 .project-detail-page {
   display: grid;
@@ -877,4 +915,23 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
   .member-identity { gap: 7px; }
   .member-avatar { width: 28px; height: 28px; flex-basis: 28px; }
   .member-role, .member-status { width: 54px; padding-inline: 2px; font-size: 9px; }
+}
+
+@media (max-width: 1100px) {
+  .all-projects-page { padding-inline: 24px; }
+  .all-projects-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .all-projects-search { grid-column: 1 / -1; }
+}
+
+@media (max-width: 620px) {
+  .all-projects-page { gap: 14px; padding: 20px 12px; }
+  .all-projects-heading { flex-direction: column; }
+  .all-projects-heading h1 { font-size: 20px; }
+  .all-projects-create-button.MuiButton-root { width: 100%; }
+  .all-projects-metrics { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .all-projects-metric-card { min-height: 96px; padding: 13px; }
+  .all-projects-toolbar { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 10px; }
+  .all-projects-search { grid-column: auto; }
+  .all-projects-table-card { margin-bottom: 8px; }
+  .all-projects-table .MuiTableCell-root { padding-inline: 12px; }
 }

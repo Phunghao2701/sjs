@@ -36,8 +36,9 @@ const projectSections: { label: string; value: ProjectTab }[] = [
 ]
 
 export function Sidebar({ activePage, activeProject, projects, projectsLoading, projectTab, onNavigate, onProjectOpen }: SidebarProps) {
-  const [projectOpen, setProjectOpen] = useState(false)
+  const [projectOpen, setProjectOpen] = useState(() => activePage === 'all-projects')
   const projectPageActive = activePage === 'project-detail'
+  const projectGroupActive = activePage === 'all-projects' || activePage === 'create-project' || projectPageActive
   const closeProjectMenuOnMobile = () => {
     if (window.matchMedia('(max-width: 620px)').matches) setProjectOpen(false)
   }
@@ -74,7 +75,7 @@ export function Sidebar({ activePage, activeProject, projects, projectsLoading, 
 
         <Box className="nav-group-wrap">
           <ButtonBase
-            className={`nav-item nav-group-toggle${activePage === 'create-project' || projectPageActive ? ' has-active-child' : ''}`}
+            className={`nav-item nav-group-toggle${projectGroupActive ? ' has-active-child' : ''}`}
             onClick={() => setProjectOpen((open) => !open)}
             aria-expanded={projectOpen}
             aria-controls="project-navigation"
@@ -87,6 +88,17 @@ export function Sidebar({ activePage, activeProject, projects, projectsLoading, 
           </ButtonBase>
 
           {projectOpen && <Box id="project-navigation" className="nested-nav">
+            <ButtonBase
+              className={`nested-nav-link${activePage === 'all-projects' ? ' is-active' : ''}`}
+              onClick={() => {
+                onNavigate('all-projects')
+                if (window.matchMedia('(max-width: 620px)').matches) setProjectOpen(false)
+              }}
+              aria-current={activePage === 'all-projects' ? 'page' : undefined}
+            >
+              All Projects
+            </ButtonBase>
+
             <ButtonBase
               className={`nested-nav-link${activePage === 'create-project' ? ' is-active' : ''}`}
               onClick={() => {
