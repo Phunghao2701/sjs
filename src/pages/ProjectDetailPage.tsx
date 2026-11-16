@@ -276,6 +276,12 @@ function formatWorkCount(count: number) {
   return new Intl.NumberFormat('en-US').format(count)
 }
 
+function formatKeywordMatchCount(count: number) {
+  // The Worker caps OpenAlex search totals at 10,000, so this is a lower-bound label at the cap.
+  const formattedCount = formatWorkCount(count)
+  return count >= 10_000 ? `${formattedCount}+` : formattedCount
+}
+
 function OverviewErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return <Box className="project-overview-error" role="alert">
     <Typography>{message}</Typography>
@@ -926,7 +932,7 @@ function KeywordContent({
                   <Typography className="keyword-result-status">Unavailable</Typography>
                   <Button size="small" variant="outlined" onClick={() => setRetryVersion((version) => version + 1)}>Retry</Button>
                 </Box>
-                  : <Typography className="keyword-result-status">{formatWorkCount(result.data.total)} matches</Typography>}
+                  : <Typography className="keyword-result-status">{formatKeywordMatchCount(result.data.total)} matches</Typography>}
             </Box>
           }) : <Box className="project-list-empty">Add a keyword to start monitoring publications.</Box>}
         </Box>
