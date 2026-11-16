@@ -8,6 +8,12 @@ import {
   PlusIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
+import {
+  ProjectInlineSkeleton,
+  ProjectKeywordRowsSkeleton,
+  ProjectOverviewChartSkeleton,
+  ProjectPublicationListSkeleton,
+} from '../components/ProjectLoadingSkeletons'
 import type { LocalProject, ProjectTab } from '../types/project'
 import { getKeywordMonitoringResult, type KeywordMonitoringResult } from '../services/keywordMonitoring'
 import { getProjectResearchData } from '../services/projectResearchCache'
@@ -243,10 +249,10 @@ function OverviewContent({
 }) {
   const growthRate = data?.growthRate
   const metrics = [
-    { label: 'Related articles', value: loading || error ? '—' : data ? formatWorkCount(data.totalWorks) : '0' },
-    { label: 'Growth rate', value: loading || error || growthRate === null || growthRate === undefined ? '—' : `${growthRate >= 0 ? '+' : ''}${growthRate.toFixed(1)}%` },
-    { label: 'Tracked keywords', value: String(topics.length) },
-    { label: 'New alerts / 24h', value: '0' },
+    { label: 'Related articles', value: error ? '—' : data ? formatWorkCount(data.totalWorks) : '0', loading, width: 72 },
+    { label: 'Growth rate', value: error || growthRate === null || growthRate === undefined ? '—' : `${growthRate >= 0 ? '+' : ''}${growthRate.toFixed(1)}%`, loading, width: 58 },
+    { label: 'Tracked keywords', value: String(topics.length), loading: false, width: 34 },
+    { label: 'New alerts / 24h', value: '0', loading: false, width: 28 },
   ]
 
   return <Box className="project-overview-content">
@@ -254,9 +260,9 @@ function OverviewContent({
       <Typography component="h2" className="project-section-heading">Project Overview</Typography>
     </Box>
     <Box className="project-metric-grid">
-      {metrics.map((metric) => <Paper variant="outlined" className="project-metric-card" key={metric.label}>
+      {metrics.map((metric) => <Paper variant="outlined" className="project-metric-card" key={metric.label} aria-busy={metric.loading}>
         <Typography>{metric.label}</Typography>
-        <strong>{metric.value}</strong>
+        <strong>{metric.loading ? <ProjectInlineSkeleton width={metric.width} height={30} /> : metric.value}</strong>
       </Paper>)}
     </Box>
     <Box className="project-chart-grid">
@@ -276,7 +282,7 @@ function OverviewContent({
         </Box>
         <Typography className="project-card-description">Related publications over time</Typography>
         {loading
-          ? <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="Loading project data" description="Fetching publication metrics from OpenAlex." />
+          ? <ProjectOverviewChartSkeleton kind="trend" />
           : error
             ? <OverviewErrorState message={error} onRetry={onRetry} />
             : data?.years.length
@@ -287,7 +293,7 @@ function OverviewContent({
         <Typography component="h3">Subject Area Distribution</Typography>
         <Typography className="project-card-description">Publications by research field</Typography>
         {loading
-          ? <EmptyState icon={<ClockIcon width={28} height={28} />} title="Loading distribution" description="Subject area breakdown will appear here." />
+          ? <ProjectOverviewChartSkeleton kind="distribution" />
           : error
             ? <EmptyState icon={<ClockIcon width={23} height={23} />} title="Distribution unavailable" description={error} />
             : data?.totalWorks && data.subjects.length
@@ -300,7 +306,7 @@ function OverviewContent({
         <Typography component="h3">Publication Type Distribution</Typography>
         <Typography className="project-card-description">Journal, conference and other sources</Typography>
         {loading
-          ? <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="Loading distribution" description="Publication type trends will appear here." />
+          ? <ProjectOverviewChartSkeleton kind="types" />
           : error
             ? <EmptyState icon={<ChartBarIcon width={24} height={24} />} title="Type data unavailable" description={error} />
             : data?.totalWorks && data.types.some((item) => item.count > 0)
@@ -311,9 +317,9 @@ function OverviewContent({
         <Typography component="h3">Monitoring Summary</Typography>
         <SummaryRow
           label="Total journals"
-          value={loading || error ? '—' : data ? `${formatWorkCount(data.journalCount)}${data.journalCountComplete ? '' : '+'}` : '0'}
+          value={loading ? <ProjectInlineSkeleton width={64} /> : error ? '—' : data ? `${formatWorkCount(data.journalCount)}${data.journalCountComplete ? '' : '+'}` : '0'}
         />
-        <SummaryRow label="Last updated" value={loading ? 'Loading…' : data ? new Date(data.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not available'} />
+        <SummaryRow label="Last updated" value={loading ? <ProjectInlineSkeleton width={92} /> : data ? new Date(data.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not available'} />
         <SummaryRow label="New alerts" value="0" />
       </Paper>
     </Box>
@@ -630,7 +636,7 @@ function EmptyState({ icon, title, description }: { icon: ReactNode; title: stri
   </Box>
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
+function SummaryRow({ label, value }: { label: string; value: ReactNode }) {
   return <Box className="project-summary-row">
     <Typography>{label}</Typography>
     <Typography>{value}</Typography>
@@ -710,8 +716,8 @@ function NewsFeedContent({ projectId, topics, projectQuery }: {
   return <Box className="project-tab-content">
     <Box className="project-tab-intro">
       <Typography component="h2" className="project-section-heading">Scientific News Feed</Typography>
-      <Box className="project-count-pill">
-        {loading ? 'Loading…' : error ? 'Unavailable' : `${formatWorkCount(total)} articles`}
+      <Box className="project-count-pill" role={loading ? 'status' : undefined} aria-label={loading ? 'Loading article count' : undefined}>
+        {loading ? <ProjectInlineSkeleton width={76} height={18} /> : error ? 'Unavailable' : `${formatWorkCount(total)} articles`}
       </Box>
     </Box>
     <Box className="news-feed-grid">
@@ -729,10 +735,10 @@ function NewsFeedContent({ projectId, topics, projectQuery }: {
         </Box>
         <Box className="publication-list-heading">
           <Typography>Recent Publications</Typography>
-          <Typography>{activeRequest?.status === 'success' ? `${works.length} shown · Newest first` : 'Newest first'}</Typography>
+          {loading ? <ProjectInlineSkeleton width={94} height={16} /> : <Typography>{activeRequest?.status === 'success' ? `${works.length} shown · Newest first` : 'Newest first'}</Typography>}
         </Box>
         <Box className="project-publication-list" aria-live="polite">
-          {loading ? <Box className="project-list-empty" role="status">Loading publications from OpenAlex…</Box>
+          {loading ? <ProjectPublicationListSkeleton />
             : error ? <Box className="project-feed-error" role="alert">
               <Typography>{error}</Typography>
               <Button size="small" variant="outlined" onClick={() => setRequestVersion((version) => version + 1)}>Retry</Button>
@@ -753,7 +759,7 @@ function NewsFeedContent({ projectId, topics, projectQuery }: {
               }) : <Box className="project-list-empty">No OpenAlex publications match this search.</Box>}
         </Box>
         <Box className="publication-pagination">
-          <Typography>{loading ? 'Loading results…' : totalPages ? `Page ${page} of ${totalPages}` : 'No pages'}</Typography>
+          {loading ? <ProjectInlineSkeleton width={82} height={16} /> : <Typography>{totalPages ? `Page ${page} of ${totalPages}` : 'No pages'}</Typography>}
           <Box>
             <Button size="small" disabled={page <= 1 || loading} onClick={() => setPage((current) => Math.max(1, current - 1))}>Previous</Button>
             <Button size="small" disabled={!totalPages || page >= totalPages || loading} onClick={() => setPage((current) => current + 1)}>Next</Button>
@@ -952,10 +958,10 @@ function KeywordContent({
               <Paper variant="outlined" className="keyword-suggestion-paper">
                 <Box className="keyword-list-header">
                   <Typography>SUGGESTED KEYWORDS</Typography>
-                  <Typography>{keywordSearchLoading ? 'Loading' : activeKeywordSuggestionRequest?.status === 'error' ? 'Unavailable' : `${keywordSuggestions.length} results`}</Typography>
+                  {keywordSearchLoading ? <ProjectInlineSkeleton width={54} height={16} /> : <Typography>{activeKeywordSuggestionRequest?.status === 'error' ? 'Unavailable' : `${keywordSuggestions.length} results`}</Typography>}
                 </Box>
                 <Box className="keyword-suggestion-list keyword-list" aria-label="Suggested keywords">
-                  {keywordSearchLoading ? <Typography className="no-keywords" role="status">Searching OpenAlex keywords...</Typography>
+                  {keywordSearchLoading ? <ProjectKeywordRowsSkeleton rows={5} />
                     : activeKeywordSuggestionRequest?.status === 'error' ? <Typography className="no-keywords data-status-error" role="alert">
                       {activeKeywordSuggestionRequest.message}{' '}
                       <Button size="small" onClick={() => setKeywordSearchVersion((version) => version + 1)}>Retry</Button>
@@ -992,7 +998,7 @@ function KeywordContent({
             const isLoading = !result
             return <Box className="keyword-result-row" key={topic}>
               <Typography>{topic}</Typography>
-              {isLoading ? <Typography className="keyword-result-status" role="status">Searching OpenAlex…</Typography>
+              {isLoading ? <Box className="keyword-result-status" role="status" aria-label={`Loading matches for ${topic}`}><ProjectInlineSkeleton width={72} height={16} /></Box>
                 : result.status === 'error' ? <Box className="keyword-result-error" role="alert">
                   <Typography className="keyword-result-status">Unavailable</Typography>
                   <Button size="small" variant="outlined" onClick={() => setRetryVersion((version) => version + 1)}>Retry</Button>

@@ -3,6 +3,7 @@ import { Box, Button, CssBaseline, ThemeProvider, Typography } from '@mui/materi
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { AppShell } from './components/AppShell'
 import { PageTransition } from './components/PageTransition'
+import { ProjectDetailLoadingSkeleton } from './components/ProjectLoadingSkeletons'
 import { ResearchPulseDesignSystem } from './design-system/ResearchPulseDesignSystem'
 import { CreateProjectPage } from './pages/CreateProjectPage'
 import { OverviewPage } from './pages/OverviewPage'
@@ -288,6 +289,7 @@ function ResearchPulseApp() {
         activePage={activePage}
         activeProject={activeProject}
         projects={projects}
+        projectsLoading={projectsLoading}
         projectTab={projectTab}
         accountEmail={auth.currentUser?.email ?? 'user@example.com'}
         onNavigate={handleNavigate}
@@ -316,8 +318,10 @@ function ResearchPulseApp() {
                   onProjectTopicsChange={(topics) => handleProjectTopicsChange(activeProject.id, topics)}
                 />
                 : activePage === 'project-detail'
-                  ? <Box className="project-overview-error" role={projectsError ? 'alert' : 'status'}>
-                    <Typography>{projectsError ? 'Could not load this project.' : projectsLoading ? 'Loading project...' : 'Project not found.'}</Typography>
+                  ? projectsLoading
+                    ? <ProjectDetailLoadingSkeleton />
+                    : <Box className="project-overview-error" role={projectsError ? 'alert' : 'status'}>
+                    <Typography>{projectsError ? 'Could not load this project.' : 'Project not found.'}</Typography>
                     {projectsError && <Button size="small" variant="outlined" onClick={() => { void loadProjects() }}>Retry</Button>}
                   </Box>
                   : <OverviewPage />}

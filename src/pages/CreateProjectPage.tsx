@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Box, Button, ButtonBase, FormControl, FormControlLabel, IconButton, InputBase, Paper, Popover, Radio, RadioGroup, TextField, Typography } from '@mui/material'
 import { CheckIcon, ChevronDownIcon, MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { ProjectInlineSkeleton, ProjectKeywordRowsSkeleton, ProjectRecentRowsSkeleton } from '../components/ProjectLoadingSkeletons'
 import { getSubjectAreas, searchKeywords, type WorkerKeyword, type WorkerSubjectArea } from '../services/workerApi'
 import type { LocalProject } from '../types/project'
 import type { NewProject } from '../services/projectStore'
@@ -227,7 +228,7 @@ export function CreateProjectPage({ projects, projectsLoading, projectsError, ca
                     <Button type="button" variant="contained" disabled={!subjectDraftId} onClick={applySubjectSelection}>Apply</Button>
                   </Box>
                 </Popover>
-                {subjectLoading && <Typography className="data-status" role="status">Loading subject areas...</Typography>}
+                {subjectLoading && <Typography className="data-status" role="status" aria-label="Loading subject areas"><ProjectInlineSkeleton width={156} height={18} /></Typography>}
                 {subjectError && <Typography className="data-status data-status-error" role="alert">{subjectError} <Button type="button" size="small" onClick={retrySubjects}>Retry</Button></Typography>}
                 {!subjectLoading && !subjectError && !subjectOptions.length && <Typography className="data-status">No subject areas are available.</Typography>}
               </FormControl>
@@ -241,7 +242,7 @@ export function CreateProjectPage({ projects, projectsLoading, projectsError, ca
           {projectsError
             ? <Box className="recent-projects-empty"><Box><Typography>Could not load saved projects.</Typography><Button type="button" size="small" onClick={onRetryProjects}>Retry</Button></Box></Box>
             : projectsLoading && projects.length === 0
-              ? <Box className="recent-projects-empty"><Typography role="status">Loading saved projects...</Typography></Box>
+              ? <ProjectRecentRowsSkeleton />
               : projects.length === 0
                 ? <Box className="recent-projects-empty"><Box><Typography>No recent projects yet</Typography><Typography>Your projects will appear here once created.</Typography></Box></Box>
                 : <Box className="recent-project-list">{projects.slice(0, 3).map((project) => <ButtonBase className="recent-project-row" key={project.id} onClick={() => onProjectOpen(project)} title={`Open ${project.name}`}><Box className="recent-project-mark">{project.name.slice(0, 1).toUpperCase()}</Box><Box className="recent-project-copy"><Typography>{project.name}</Typography><Typography>{project.subject} · {project.topics.length} topic{project.topics.length === 1 ? '' : 's'}</Typography></Box><CheckIcon width={16} height={16} aria-label="Saved" /></ButtonBase>)}</Box>}
@@ -252,9 +253,9 @@ export function CreateProjectPage({ projects, projectsLoading, projectsError, ca
         <Box className="keyword-explorer-heading"><Typography component="h2">Keyword Explorer</Typography></Box>
         <Typography className="keyword-explorer-description">Add topics to monitor in your project.</Typography>
         <Box className="keyword-search"><InputBase value={keywordQuery} onChange={(event) => setKeywordQuery(event.target.value)} placeholder="Search keywords..." inputProps={{ 'aria-label': 'Search suggested keywords' }} /></Box>
-        <Box className="keyword-list-header"><Typography>SUGGESTED KEYWORDS</Typography><Typography>{keywordLoading ? 'Loading' : `${suggestions.length} results`}</Typography></Box>
+        <Box className="keyword-list-header"><Typography>SUGGESTED KEYWORDS</Typography>{keywordLoading ? <ProjectInlineSkeleton width={54} height={16} /> : <Typography>{`${suggestions.length} results`}</Typography>}</Box>
         <Box className="keyword-list" aria-label="Suggested keywords">
-          {keywordLoading ? <Typography className="no-keywords" role="status">Searching OpenAlex keywords...</Typography>
+          {keywordLoading ? <ProjectKeywordRowsSkeleton rows={8} />
             : keywordError ? <Typography className="no-keywords data-status-error" role="alert">{keywordError} <Button type="button" size="small" onClick={() => setKeywordRequestVersion((version) => version + 1)}>Retry</Button></Typography>
               : suggestions.length ? suggestions.map((keyword) => {
                 const name = keyword.display_name || keyword.name

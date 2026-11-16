@@ -4,6 +4,7 @@ import {
   ButtonBase,
   IconButton,
   InputBase,
+  Skeleton,
   Typography,
 } from '@mui/material'
 import {
@@ -21,6 +22,7 @@ type SidebarProps = {
   activePage: AppPage
   activeProject: LocalProject | null
   projects: LocalProject[]
+  projectsLoading: boolean
   projectTab: ProjectTab
   onNavigate: (page: AppPage) => void
   onProjectOpen: (project: LocalProject, tab: ProjectTab) => void
@@ -33,7 +35,7 @@ const projectSections: { label: string; value: ProjectTab }[] = [
   { label: 'Members', value: 'members' },
 ]
 
-export function Sidebar({ activePage, activeProject, projects, projectTab, onNavigate, onProjectOpen }: SidebarProps) {
+export function Sidebar({ activePage, activeProject, projects, projectsLoading, projectTab, onNavigate, onProjectOpen }: SidebarProps) {
   const [projectOpen, setProjectOpen] = useState(false)
   const projectPageActive = activePage === 'project-detail'
   const closeProjectMenuOnMobile = () => {
@@ -96,7 +98,11 @@ export function Sidebar({ activePage, activeProject, projects, projectTab, onNav
               Create Project
             </ButtonBase>
 
-            {projects.map((project) => <Box key={project.id}>
+            {projectsLoading
+              ? <Box className="project-navigation-skeleton" role="status" aria-label="Loading projects">
+                {[0, 1, 2].map((item) => <Skeleton key={item} variant="text" width={`${68 + item * 8}%`} height={30} aria-hidden="true" />)}
+              </Box>
+              : projects.map((project) => <Box key={project.id}>
               <ButtonBase
                 className={`nested-nav-link nested-nav-project${activeProject?.id === project.id && projectPageActive ? ' is-active' : ''}`}
                 onClick={() => {
@@ -121,7 +127,7 @@ export function Sidebar({ activePage, activeProject, projects, projectTab, onNav
                   {section.label}
                 </ButtonBase>)}
               </Box>}
-            </Box>)}
+              </Box>)}
           </Box>}
         </Box>
       </Box>

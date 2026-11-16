@@ -10,6 +10,7 @@ type AppShellProps = {
   activePage: AppPage
   activeProject: LocalProject | null
   projects: LocalProject[]
+  projectsLoading: boolean
   projectTab: ProjectTab
   accountEmail: string
   onNavigate: (page: AppPage) => void
@@ -18,13 +19,14 @@ type AppShellProps = {
   children: ReactNode
 }
 
-export function AppShell({ activePage, activeProject, projects, projectTab, accountEmail, onNavigate, onProjectOpen, onLogout, children }: AppShellProps) {
+export function AppShell({ activePage, activeProject, projects, projectsLoading, projectTab, accountEmail, onNavigate, onProjectOpen, onLogout, children }: AppShellProps) {
   return (
     <Box className="app-shell">
       <Sidebar
         activePage={activePage}
         activeProject={activeProject}
         projects={projects}
+        projectsLoading={projectsLoading}
         projectTab={projectTab}
         onNavigate={onNavigate}
         onProjectOpen={onProjectOpen}
