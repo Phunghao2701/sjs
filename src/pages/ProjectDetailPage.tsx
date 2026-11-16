@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { Box, Button, ButtonBase, ClickAwayListener, IconButton, InputBase, MenuItem, Paper, Popper, Select, Typography } from '@mui/material'
 import {
   ChartBarIcon,
@@ -753,6 +753,7 @@ function KeywordContent({
   const [keywordSearchVersion, setKeywordSearchVersion] = useState(0)
   const [selectedKeyword, setSelectedKeyword] = useState<WorkerKeyword | null>(null)
   const [newKeywordInputAnchor, setNewKeywordInputAnchor] = useState<HTMLDivElement | null>(null)
+  const [newKeywordInputWidth, setNewKeywordInputWidth] = useState(0)
   const [keywordSuggestionRequest, setKeywordSuggestionRequest] = useState<
     | { query: ''; status: 'idle' }
     | { query: string; status: 'loading' }
@@ -761,6 +762,16 @@ function KeywordContent({
   >({ query: '', status: 'idle' })
   const uniqueTopics = useMemo(() => Array.from(new Set(trackedTopics.map((topic) => topic.trim()).filter(Boolean))), [trackedTopics])
   const trackedKeywordNames = useMemo(() => new Set(uniqueTopics.map((topic) => topic.toLocaleLowerCase())), [uniqueTopics])
+
+  useLayoutEffect(() => {
+    if (!newKeywordInputAnchor) return
+
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      setNewKeywordInputWidth(entry.contentRect.width)
+    })
+    resizeObserver.observe(newKeywordInputAnchor)
+    return () => resizeObserver.disconnect()
+  }, [newKeywordInputAnchor])
 
   useEffect(() => {
     const query = newTopic.trim()
@@ -862,7 +873,7 @@ function KeywordContent({
         <ClickAwayListener onClickAway={() => setKeywordSuggestionRequest({ query: '', status: 'idle' })}>
           <Box>
             <Box className="watchlist-actions">
-              <Box className="project-input-frame" ref={setNewKeywordInputAnchor}>
+              <Box className="keyword-search" ref={setNewKeywordInputAnchor}>
                 <InputBase
                   value={newTopic}
                   onChange={(event) => {
@@ -900,32 +911,39 @@ function KeywordContent({
               placement="bottom-start"
               disablePortal
               className="keyword-suggestion-popper"
+              style={{ width: newKeywordInputWidth }}
             >
-              <Paper variant="outlined" className="keyword-suggestion-paper" role="listbox" aria-label="OpenAlex keyword suggestions">
-                {activeKeywordSuggestionRequest?.status === 'loading' ? <Typography className="keyword-suggestion-status" role="status">Searching OpenAlex keywords...</Typography>
-                  : activeKeywordSuggestionRequest?.status === 'error' ? <Box className="keyword-suggestion-status" role="alert">
-                    <Typography>{activeKeywordSuggestionRequest.message}</Typography>
-                    <Button size="small" onClick={() => {
-                      setKeywordSuggestionRequest({ query: newTopic.trim(), status: 'loading' })
-                      setKeywordSearchVersion((version) => version + 1)
-                    }}>Retry</Button>
-                  </Box>
-                    : keywordSuggestions.length ? keywordSuggestions.map((keyword) => {
-                      const name = keyword.display_name || keyword.name
-                      const alreadyTracked = trackedKeywordNames.has(name.toLocaleLowerCase())
-                      return <ButtonBase
-                        key={keyword.id || name}
-                        className="keyword-suggestion-option"
-                        role="option"
-                        aria-selected={selectedKeyword?.id === keyword.id}
-                        disabled={alreadyTracked}
-                        disableRipple
-                        onClick={() => selectKeyword(keyword)}
-                      >
-                        <Typography>{name}</Typography>
-                        {alreadyTracked && <Typography>Already added</Typography>}
-                      </ButtonBase>
-                    }) : <Typography className="keyword-suggestion-status">No OpenAlex keywords found.</Typography>}
+              <Paper variant="outlined" className="keyword-suggestion-paper">
+                <Box className="keyword-list-header">
+                  <Typography>SUGGESTED KEYWORDS</Typography>
+                  <Typography>{activeKeywordSuggestionRequest?.status === 'loading' ? 'Loading' : activeKeywordSuggestionRequest?.status === 'error' ? 'Unavailable' : `${keywordSuggestions.length} results`}</Typography>
+                </Box>
+                <Box className="keyword-suggestion-list keyword-list" role="listbox" aria-label="OpenAlex keyword suggestions">
+                  {activeKeywordSuggestionRequest?.status === 'loading' ? <Typography className="no-keywords" role="status">Searching OpenAlex keywords...</Typography>
+                    : activeKeywordSuggestionRequest?.status === 'error' ? <Typography className="no-keywords data-status-error" role="alert">
+                      {activeKeywordSuggestionRequest.message}{' '}
+                      <Button size="small" onClick={() => {
+                        setKeywordSuggestionRequest({ query: newTopic.trim(), status: 'loading' })
+                        setKeywordSearchVersion((version) => version + 1)
+                      }}>Retry</Button>
+                    </Typography>
+                      : keywordSuggestions.length ? keywordSuggestions.map((keyword) => {
+                        const name = keyword.display_name || keyword.name
+                        const alreadyTracked = trackedKeywordNames.has(name.toLocaleLowerCase())
+                        return <ButtonBase
+                          key={keyword.id || name}
+                          className="keyword-row keyword-suggestion-option"
+                          role="option"
+                          aria-selected={false}
+                          disabled={alreadyTracked}
+                          disableRipple
+                          onClick={() => selectKeyword(keyword)}
+                        >
+                          <Typography>{name}</Typography>
+                          <PlusIcon width={17} height={17} aria-hidden="true" />
+                        </ButtonBase>
+                      }) : <Typography className="no-keywords">No OpenAlex keywords found.</Typography>}
+                </Box>
               </Paper>
             </Popper>
           </Box>

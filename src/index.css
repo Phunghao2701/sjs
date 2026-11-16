@@ -756,15 +756,15 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 .tracked-keyword-row .MuiIconButton-root { width: 24px; height: 24px; color: #858c95; }
 .tracked-keyword-row .MuiIconButton-root:hover { background: var(--hover); }
 .watchlist-actions { display: flex; flex-direction: column; gap: 8px; }
-.watchlist-actions .MuiButton-root { min-height: 38px; border-radius: 19px; font-size: 12px; }
-.keyword-suggestion-popper { z-index: 1300; width: 100%; }
-.keyword-suggestion-paper { max-height: 240px; overflow: auto; padding: 4px; border-color: #e2e5e9 !important; border-radius: 7px !important; box-shadow: 0 8px 20px rgb(20 23 26 / 12%) !important; }
-.keyword-suggestion-option { display: flex; width: 100%; min-height: 36px; justify-content: space-between !important; gap: 8px; padding: 7px 8px; border-radius: 4px; color: #252a2f; text-align: left; }
-.keyword-suggestion-option p { overflow: hidden; color: inherit; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.keyword-suggestion-option p:last-child:not(:first-child) { flex: 0 0 auto; color: #858c95; font-size: 10px; }
-.keyword-suggestion-option.Mui-disabled { color: #858c95; opacity: 1; }
-.keyword-suggestion-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; color: #858c95; font-size: 11px !important; }
-.keyword-suggestion-status .MuiButton-root { min-height: 26px; font-size: 10px; }
+.watchlist-actions .keyword-search { margin-top: 0; }
+.watchlist-actions .MuiButton-root { min-height: 38px; border-radius: 7px; font-size: 12px; }
+.keyword-suggestion-popper { z-index: 1300; }
+.keyword-suggestion-paper { display: flex; max-height: 280px; flex-direction: column; overflow: hidden; padding: 13px; border-color: #e2e5e9 !important; border-radius: 7px !important; box-shadow: 0 8px 20px rgb(20 23 26 / 12%) !important; }
+.keyword-suggestion-paper .keyword-list-header { flex: 0 0 auto; margin-top: 0; }
+.keyword-suggestion-list.keyword-list { min-height: 0; flex: 0 1 auto; overflow: auto; padding-top: 10px; }
+.keyword-suggestion-option { flex: 0 0 auto; }
+.keyword-suggestion-option svg { width: 17px; height: 17px; flex: 0 0 17px; color: #626972; }
+.keyword-suggestion-option.Mui-disabled { opacity: 0.55; }
 .keyword-results-card .project-card-description { margin-top: -7px; }
 .keyword-result-list { display: flex; min-height: 0; flex: 1; flex-direction: column; overflow: auto; }
 .keyword-result-row { display: flex; min-height: 40px; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px 0 8px; border-bottom: 1px solid #e2e5e9; }
