@@ -85,9 +85,25 @@ function buildProjectOverview(overview: WorkerProjectOverview): ProjectOverviewD
     subjects: overview.subject_areas,
     journalCount: overview.journal_count,
     journalCountComplete: overview.journal_count_complete,
-    growthRate: overview.growth_rate,
+    growthRate: calculateGrowthRate(overview.years),
     updatedAt: overview.updated_at,
   }
+}
+
+function calculateGrowthRate(years: ProjectOverviewData['years']) {
+  const completeYears = years
+    .filter(({ year }) => year < currentPublicationYear)
+    .sort((left, right) => left.year - right.year)
+  const firstYear = completeYears[0]
+  const latestYear = completeYears[completeYears.length - 1]
+
+  if (!firstYear || !latestYear || firstYear.year === latestYear.year || firstYear.count <= 0 || latestYear.count <= 0) {
+    return null
+  }
+
+  const elapsedYears = latestYear.year - firstYear.year
+  const growthRate = (Math.pow(latestYear.count / firstYear.count, 1 / elapsedYears) - 1) * 100
+  return Number.isFinite(growthRate) ? growthRate : null
 }
 
 export function ProjectDetailPage({ project, activeTab, onTabChange, onProjectTopicsChange }: ProjectDetailPageProps) {
