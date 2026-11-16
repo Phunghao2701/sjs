@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CssBaseline, ThemeProvider } from '@mui/material'
+import { Box, Button, CssBaseline, ThemeProvider, Typography } from '@mui/material'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { AppShell } from './components/AppShell'
 import { PageTransition } from './components/PageTransition'
@@ -16,6 +16,47 @@ import { researchPulseTheme } from './theme'
 
 export type AppPage = 'overview' | 'create-project' | 'project-detail'
 
+type AppRoute = {
+  page: AppPage
+  projectId: string | null
+  tab: ProjectTab
+}
+
+const projectTabValues: ProjectTab[] = ['overview', 'news-feed', 'keywords-monitoring', 'members']
+
+function readAppRoute(): AppRoute {
+  const params = new URLSearchParams(window.location.search)
+  const page = params.get('page')
+  if (page === 'create-project') return { page, projectId: null, tab: 'overview' }
+
+  const projectId = params.get('projectId')
+  if (page === 'project-detail' && projectId) {
+    const requestedTab = params.get('tab') as ProjectTab | null
+    return {
+      page,
+      projectId,
+      tab: requestedTab && projectTabValues.includes(requestedTab) ? requestedTab : 'overview',
+    }
+  }
+
+  return { page: 'overview', projectId: null, tab: 'overview' }
+}
+
+function writeAppRoute(route: AppRoute, replace = false) {
+  const url = new URL(window.location.href)
+  url.pathname = '/'
+  url.search = ''
+  if (route.page === 'create-project') {
+    url.searchParams.set('page', 'create-project')
+  } else if (route.page === 'project-detail' && route.projectId) {
+    url.searchParams.set('page', 'project-detail')
+    url.searchParams.set('projectId', route.projectId)
+    url.searchParams.set('tab', route.tab)
+  }
+
+  window.history[replace ? 'replaceState' : 'pushState'](window.history.state, '', `${url.pathname}${url.search}`)
+}
+
 export default function App() {
   if (window.location.pathname.replace(/\/$/, '') === '/design-system') {
     return (
@@ -30,14 +71,12 @@ export default function App() {
 }
 
 function ResearchPulseApp() {
-  const [activePage, setActivePage] = useState<AppPage>('overview')
-  const [activeProject, setActiveProject] = useState<LocalProject | null>(null)
+  const [route, setRoute] = useState<AppRoute>(readAppRoute)
   const [projects, setProjects] = useState<LocalProject[]>([])
-  const [projectTab, setProjectTab] = useState<ProjectTab>('overview')
   const [userId, setUserId] = useState<string | null>(null)
   const [authStatus, setAuthStatus] = useState<'loading' | 'ready' | 'error'>(() => firebaseConfigured ? 'loading' : 'error')
   const [authError, setAuthError] = useState(() => firebaseConfigured ? '' : 'Firebase is not configured. Set the Firebase web app variables in .env.local.')
-  const [projectsLoading, setProjectsLoading] = useState(false)
+  const [projectsLoading, setProjectsLoading] = useState(() => readAppRoute().page === 'project-detail')
   const [projectsError, setProjectsError] = useState('')
   const projectRequestVersion = useRef(0)
   const skipDevelopmentAutoSignIn = useRef(false)
@@ -45,6 +84,27 @@ function ResearchPulseApp() {
   const [ssoStatus, setSsoStatus] = useState<SsoLoginStatus>('idle')
   const [ssoError, setSsoError] = useState('')
   const developmentAutoLoginEnabled = firebaseEmulatorsEnabled && import.meta.env.VITE_DEV_AUTH_AUTO_LOGIN !== 'false'
+  const projectRouteIsMissing = authStatus === 'ready'
+    && !projectsLoading
+    && !projectsError
+    && route.page === 'project-detail'
+    && Boolean(route.projectId)
+    && !projects.some((project) => project.id === route.projectId)
+  const currentRoute = projectRouteIsMissing ? { page: 'overview', projectId: null, tab: 'overview' } as AppRoute : route
+  const activePage = currentRoute.page
+  const projectTab = currentRoute.tab
+  const activeProject = currentRoute.projectId ? projects.find((project) => project.id === currentRoute.projectId) ?? null : null
+
+  const navigate = useCallback((nextRoute: AppRoute, replace = false) => {
+    writeAppRoute(nextRoute, replace)
+    setRoute(nextRoute)
+  }, [])
+
+  useEffect(() => {
+    const handlePopState = () => setRoute(readAppRoute())
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   const loadProjects = useCallback(async () => {
     const requestVersion = ++projectRequestVersion.current
@@ -124,6 +184,10 @@ function ResearchPulseApp() {
   }, [developmentAutoLoginEnabled, loadProjects])
 
   useEffect(() => {
+    if (projectRouteIsMissing) writeAppRoute({ page: 'overview', projectId: null, tab: 'overview' }, true)
+  }, [projectRouteIsMissing])
+
+  useEffect(() => {
     if (ssoCallbackHandled.current || !hasSsoCallbackParameters()) return
     ssoCallbackHandled.current = true
     setSsoStatus('processing')
@@ -139,16 +203,20 @@ function ResearchPulseApp() {
   const handleProjectCreate = async (projectDraft: NewProject) => {
     const project = await createProjectInFirestore(projectDraft)
     setProjects((current) => [project, ...current.filter((item) => item.id !== project.id)])
-    setActiveProject(project)
-    setProjectTab('overview')
-    setActivePage('project-detail')
+    navigate({ page: 'project-detail', projectId: project.id, tab: 'overview' })
     return project
   }
 
   const handleProjectOpen = (project: LocalProject, tab: ProjectTab = 'overview') => {
-    setActiveProject(project)
-    setProjectTab(tab)
-    setActivePage('project-detail')
+    navigate({ page: 'project-detail', projectId: project.id, tab })
+  }
+
+  const handleNavigate = (page: AppPage) => {
+    navigate({ page, projectId: null, tab: 'overview' })
+  }
+
+  const handleProjectTabChange = (tab: ProjectTab) => {
+    if (activeProject) navigate({ page: 'project-detail', projectId: activeProject.id, tab })
   }
 
   const handleSsoSignIn = async () => {
@@ -166,9 +234,7 @@ function ResearchPulseApp() {
     if (firebaseEmulatorsEnabled) skipDevelopmentAutoSignIn.current = true
     try {
       await signOut(auth)
-      setActivePage('overview')
-      setActiveProject(null)
-      setProjectTab('overview')
+      navigate({ page: 'overview', projectId: null, tab: 'overview' }, true)
     } catch (error) {
       skipDevelopmentAutoSignIn.current = false
       setAuthError(error instanceof Error ? error.message : 'Could not sign out.')
@@ -216,7 +282,7 @@ function ResearchPulseApp() {
         projects={projects}
         projectTab={projectTab}
         accountEmail={auth.currentUser?.email ?? 'user@example.com'}
-        onNavigate={setActivePage}
+        onNavigate={handleNavigate}
         onProjectOpen={handleProjectOpen}
         onLogout={() => { void handleLogout() }}
       >
@@ -235,8 +301,13 @@ function ResearchPulseApp() {
                 onProjectOpen={handleProjectOpen}
               />
               : activeProject
-                ? <ProjectDetailPage project={activeProject} activeTab={projectTab} onTabChange={setProjectTab} />
-                : <OverviewPage />}
+                ? <ProjectDetailPage project={activeProject} activeTab={projectTab} onTabChange={handleProjectTabChange} />
+                : activePage === 'project-detail'
+                  ? <Box className="project-overview-error" role={projectsError ? 'alert' : 'status'}>
+                    <Typography>{projectsError ? 'Could not load this project.' : projectsLoading ? 'Loading project...' : 'Project not found.'}</Typography>
+                    {projectsError && <Button size="small" variant="outlined" onClick={() => { void loadProjects() }}>Retry</Button>}
+                  </Box>
+                  : <OverviewPage />}
         </PageTransition>
       </AppShell>
     </ThemeProvider>
