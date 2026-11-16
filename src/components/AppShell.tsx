@@ -1,21 +1,23 @@
 import type { ReactNode } from 'react'
 import { Box, IconButton, InputBase, Tooltip } from '@mui/material'
-import { BellIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline'
+import { BellIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import type { AppPage } from '../App'
 import type { LocalProject, ProjectTab } from '../types/project'
 import { Sidebar } from './Sidebar'
+import { AccountMenu } from './AccountMenu'
 
 type AppShellProps = {
   activePage: AppPage
   activeProject: LocalProject | null
   projects: LocalProject[]
   projectTab: ProjectTab
+  accountEmail: string
   onNavigate: (page: AppPage) => void
   onProjectOpen: (project: LocalProject, tab: ProjectTab) => void
   children: ReactNode
 }
 
-export function AppShell({ activePage, activeProject, projects, projectTab, onNavigate, onProjectOpen, children }: AppShellProps) {
+export function AppShell({ activePage, activeProject, projects, projectTab, accountEmail, onNavigate, onProjectOpen, children }: AppShellProps) {
   return (
     <Box className="app-shell">
       <Sidebar
@@ -42,11 +44,7 @@ export function AppShell({ activePage, activeProject, projects, projectTab, onNa
                 <BellIcon width={19} height={19} />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Researcher account">
-              <IconButton className="topbar-icon-button" aria-label="Researcher account" size="small">
-                <UserIcon width={17} height={17} />
-              </IconButton>
-            </Tooltip>
+            <AccountMenu email={accountEmail} />
           </Box>
         </Box>
         <Box className="topbar-divider" />

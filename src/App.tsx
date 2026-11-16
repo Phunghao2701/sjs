@@ -143,6 +143,7 @@ function ResearchPulseApp() {
         activeProject={activeProject}
         projects={projects}
         projectTab={projectTab}
+        accountEmail={auth.currentUser?.email ?? 'user@example.com'}
         onNavigate={setActivePage}
         onProjectOpen={handleProjectOpen}
       >

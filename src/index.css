@@ -203,6 +203,20 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 .global-search .MuiInputBase-input { padding: 0; }
 .global-search .MuiInputBase-input::placeholder { color: #9aa1aa; opacity: 1; }
 .topbar-icon-button { width: 20px; height: 20px; padding: 0 !important; color: #737c86 !important; }
+.account-menu-trigger:hover { background-color: transparent !important; }
+.account-menu-paper.MuiPopover-paper { width: 356px; height: 422px; max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; border: 1px solid #e2e6ec; border-radius: 12px; background: var(--surface); box-shadow: 0 8px 16px rgb(26 31 41 / 12%); }
+.account-menu { display: flex; min-height: 0; flex-direction: column; padding: 12px 12px 26px; }
+.account-menu-identity { display: flex; height: 74px; flex: 0 0 74px; flex-direction: column; gap: 7px; padding: 10px 8px 0; }
+.account-menu-title { color: #20252e; font-size: 14px; font-weight: 500; line-height: 17px; }
+.account-menu-email { overflow: hidden; color: #667080; font-size: 12px; font-weight: 400; line-height: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.account-menu-divider { height: 1px; flex: 0 0 1px; background: #e5e8ed; }
+.account-menu-spacer { height: 12px; flex: 0 0 12px; }
+.account-menu-spacer-small { height: 11px; flex-basis: 11px; }
+.account-menu-list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.account-menu-item { display: flex; height: 58px; flex: 0 0 58px; align-items: center; gap: 12px; padding: 0 8px; color: #20252e; font-size: 14px; font-weight: 400; line-height: 20px; }
+.account-menu-item > svg { width: 18px; height: 18px; flex: 0 0 18px; color: #667085; stroke-width: 1.6; }
+.account-menu-item .account-menu-chevron { width: 16px; height: 16px; flex-basis: 16px; margin-left: auto; color: #98a2b3; }
+.account-menu-logout { height: 40px; flex-basis: 40px; }
 .topbar-divider { height: 1px; flex: 0 0 1px; background: var(--stroke-soft); }
 .page-stage { min-height: 0; flex: 1; overflow: hidden; background: var(--app-bg); }
 
@@ -240,6 +254,7 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
   .topbar { height: 60px; flex-basis: 60px; padding: 0 12px; }
   .topbar-actions { gap: 4px; }
   .topbar-icon-button { width: 32px; height: 32px; padding: 6px !important; }
+  .account-menu-paper.MuiPopover-paper { height: min(422px, calc(100dvh - 24px)); }
   .global-search { width: 36px; padding: 0 9px; border-color: transparent; background: transparent; }
   .global-search .MuiInputBase-root, .global-search .shortcut-hint { display: none; }
   .page-stage { overflow: visible; }
