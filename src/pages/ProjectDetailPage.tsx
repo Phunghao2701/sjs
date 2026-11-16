@@ -608,7 +608,7 @@ function PublicationTypeChart({ items }: { items: DistributionItem[] }) {
   return <>
     <Box className="publication-type-chart">
       <Legend items={items} colors={publicationTypeColors} hoveredIndex={hoveredIndex} onHoveredIndexChange={setHoveredIndex} onPopoverChange={setPopover} />
-      <Donut items={items} colors={publicationTypeColors} className="publication-type-donut" hoveredIndex={hoveredIndex} onHoveredIndexChange={setHoveredIndex} onPopoverChange={setPopover} />
+      <Donut items={items} colors={publicationTypeColors} className="publication-type-donut" centerLabel="100%" hoveredIndex={hoveredIndex} onHoveredIndexChange={setHoveredIndex} onPopoverChange={setPopover} />
     </Box>
     <ChartHoverPopover data={popover} />
   </>
