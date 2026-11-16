@@ -193,12 +193,19 @@ export async function searchResearch(entity: ResearchEntity, params: ResearchSea
 }
 
 export async function getProjectOverview(query: string, signal?: AbortSignal) {
-  const response = await getJson<WorkerEnvelope<WorkerProjectOverview>>(
-    '/api/v1/projects/overview',
-    { query },
-    signal,
-  )
-  return unwrap(response)
+  try {
+    const response = await getJson<WorkerEnvelope<WorkerProjectOverview>>(
+      '/api/v1/projects/overview',
+      { query },
+      signal,
+    )
+    return unwrap(response)
+  } catch (error) {
+    if (error instanceof Error && (error.message === 'not_found' || error.message.includes('(404)'))) {
+      throw new Error('Project analytics are unavailable in this Worker version. Restart or update the SJS Worker, then retry.')
+    }
+    throw error
+  }
 }
 
 export async function exchangeSsoAccessTokenForFirebaseCustomToken(accessToken: string) {
