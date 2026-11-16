@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FocusEvent, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { Box, Button, ButtonBase, IconButton, InputBase, MenuItem, Paper, Popper, Select, Typography } from '@mui/material'
 import {
   ChartBarIcon,
@@ -289,11 +289,6 @@ function popoverAtPointer(event: MouseEvent<HTMLElement>, details: ChartPopoverD
   return { ...details, x: event.clientX, y: event.clientY }
 }
 
-function popoverAtFocus<T extends Element>(event: FocusEvent<T>, details: ChartPopoverDetails): ChartPopoverData {
-  const bounds = event.currentTarget.getBoundingClientRect()
-  return { ...details, x: bounds.left + bounds.width / 2, y: bounds.top }
-}
-
 function ChartHoverPopover({ data }: { data: ChartPopoverData | null }) {
   const anchorEl = data ? { getBoundingClientRect: () => new DOMRect(data.x, data.y, 0, 0) } : null
 
@@ -366,7 +361,6 @@ function PublicationTrendChart({ years }: { years: ProjectOverviewData['years'] 
         key={point.year}
         className={`publication-trend-point${isActive ? ' is-active' : ''}`}
         style={{ left: `${point.x / width * 100}%`, top: `${point.y / height * 100}%` }}
-        tabIndex={0}
         role="img"
         aria-label={`${point.year}: ${formatWorkCount(point.count)} publications`}
         onMouseEnter={(event) => {
@@ -375,14 +369,6 @@ function PublicationTrendChart({ years }: { years: ProjectOverviewData['years'] 
         }}
         onMouseMove={(event) => setPopover(popoverAtPointer(event, details))}
         onMouseLeave={() => {
-          setHoveredYear(null)
-          setPopover(null)
-        }}
-        onFocus={(event) => {
-          setHoveredYear(point.year)
-          setPopover(popoverAtFocus(event, details))
-        }}
-        onBlur={() => {
           setHoveredYear(null)
           setPopover(null)
         }}
@@ -495,28 +481,13 @@ function Donut({ items, colors, className, centerLabel, hoveredIndex, onHoveredI
     <svg className="donut-svg" viewBox="0 0 100 100">
       {renderSegments.map((segment) => {
         const isActive = segment.index === hoveredIndex
-        const details = {
-          title: segment.item.label,
-          color: colors[segment.index % colors.length],
-          label: `${formatWorkCount(segment.item.count)} publications`,
-          value: `${Math.round(segment.item.count / total * 100)}%`,
-        }
         return <path
           key={segment.item.label}
           className={`donut-segment${isActive ? ' is-active' : ''}`}
           d={donutSegmentPath(segment.start, segment.end)}
           fill={colors[segment.index % colors.length]}
-          tabIndex={0}
           role="img"
           aria-label={`${segment.item.label}: ${formatWorkCount(segment.item.count)} publications, ${Math.round(segment.item.count / total * 100)}%`}
-          onFocus={(event) => {
-            onHoveredIndexChange(segment.index)
-            onPopoverChange(popoverAtFocus(event, details))
-          }}
-          onBlur={() => {
-            onHoveredIndexChange(null)
-            onPopoverChange(null)
-          }}
         />
       })}
     </svg>
@@ -546,7 +517,6 @@ function Legend({ items, colors, hoveredIndex, onHoveredIndexChange, onPopoverCh
       return <Box
         className={`distribution-legend-row${isActive ? ' is-highlighted' : ''}`}
         key={item.label}
-        tabIndex={0}
         role="img"
         aria-label={`${item.label}: ${formatWorkCount(item.count)} publications (${share}%)`}
         onMouseEnter={(event) => {
@@ -555,14 +525,6 @@ function Legend({ items, colors, hoveredIndex, onHoveredIndexChange, onPopoverCh
         }}
         onMouseMove={(event) => onPopoverChange(popoverAtPointer(event, details))}
         onMouseLeave={() => {
-          onHoveredIndexChange(null)
-          onPopoverChange(null)
-        }}
-        onFocus={(event) => {
-          onHoveredIndexChange(index)
-          onPopoverChange(popoverAtFocus(event, details))
-        }}
-        onBlur={() => {
           onHoveredIndexChange(null)
           onPopoverChange(null)
         }}
