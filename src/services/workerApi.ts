@@ -148,6 +148,7 @@ type WorkerEnvelope<T> = {
 } & WorkerErrorPayload
 
 const workerReadCacheTtlMs = 120_000
+const workerRequestTimeoutMs = 20_000
 const workerReadCache = new Map<string, { expiresAt: number; payload: unknown }>()
 let workerReadCacheGeneration = 0
 
@@ -186,21 +187,47 @@ async function getJson<T>(path: string, params: Record<string, string | number |
     if (cached) workerReadCache.delete(cacheKey)
   }
 
-  const response = await fetch(url, {
-    headers: { Accept: 'application/json' },
-    signal,
-  })
-  const payload = await response.json().catch(() => null) as WorkerEnvelope<T> | null
-  if (!response.ok || !payload || typeof payload !== 'object') {
-    throw new Error(payload?.message || payload?.error || `Worker request failed (${response.status}).`)
-  }
-  if (payload.success === false) throw new Error(payload.message || payload.error || 'Worker request failed.')
+  const requestController = new AbortController()
+  let timedOut = false
+  const forwardCallerAbort = () => requestController.abort(signal?.reason)
+  if (signal?.aborted) forwardCallerAbort()
+  else signal?.addEventListener('abort', forwardCallerAbort, { once: true })
+  const timeoutId = window.setTimeout(() => {
+    timedOut = true
+    requestController.abort()
+  }, workerRequestTimeoutMs)
 
-  if (cacheKey && !signal?.aborted && requestGeneration === workerReadCacheGeneration) {
-    workerReadCache.set(cacheKey, { payload, expiresAt: Date.now() + workerReadCacheTtlMs })
-  }
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      signal: requestController.signal,
+    })
+    let payload: WorkerEnvelope<T> | null
+    try {
+      payload = await response.json() as WorkerEnvelope<T>
+    } catch (error) {
+      if (timedOut || signal?.aborted) throw error
+      payload = null
+    }
+    if (!response.ok || !payload || typeof payload !== 'object') {
+      throw new Error(payload?.message || payload?.error || `Worker request failed (${response.status}).`)
+    }
+    if (payload.success === false) throw new Error(payload.message || payload.error || 'Worker request failed.')
 
-  return payload as T
+    if (cacheKey && !signal?.aborted && requestGeneration === workerReadCacheGeneration) {
+      workerReadCache.set(cacheKey, { payload, expiresAt: Date.now() + workerReadCacheTtlMs })
+    }
+
+    return payload as T
+  } catch (error) {
+    if (timedOut) {
+      throw new Error(`Worker request timed out after ${workerRequestTimeoutMs / 1000} seconds. Check that the SJS Worker is running and reachable.`)
+    }
+    throw error
+  } finally {
+    window.clearTimeout(timeoutId)
+    signal?.removeEventListener('abort', forwardCallerAbort)
+  }
 }
 
 function unwrap<T>(response: WorkerEnvelope<T>): T {
