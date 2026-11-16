@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
-import { Box, Button, ButtonBase, IconButton, InputBase, MenuItem, Paper, Popper, Select, Typography } from '@mui/material'
+import { Box, Button, ButtonBase, ClickAwayListener, IconButton, InputBase, MenuItem, Paper, Popper, Select, Typography } from '@mui/material'
 import {
   ChartBarIcon,
   ClockIcon,
@@ -9,7 +9,7 @@ import {
 } from '@heroicons/react/24/outline'
 import type { LocalProject, ProjectTab } from '../types/project'
 import { getKeywordMonitoringResult, type KeywordMonitoringResult } from '../services/keywordMonitoring'
-import { getProjectOverview, searchResearch, type ApiPagination, type WorkerProjectOverview, type WorkerWork } from '../services/workerApi'
+import { getProjectOverview, searchKeywords, searchResearch, type ApiPagination, type WorkerKeyword, type WorkerProjectOverview, type WorkerWork } from '../services/workerApi'
 
 const projectTabs: { label: string; value: ProjectTab }[] = [
   { label: 'Overview', value: 'overview' },
@@ -133,8 +133,8 @@ export function ProjectDetailPage({ project, activeTab, onTabChange }: ProjectDe
     return trackedTopics.filter((topic) => topic.toLocaleLowerCase().includes(query))
   }, [topicQuery, trackedTopics])
 
-  const addTopic = () => {
-    const value = newTopic.trim()
+  const addTopic = (topic: string) => {
+    const value = topic.trim()
     if (!value || trackedTopics.some((topic) => topic.toLocaleLowerCase() === value.toLocaleLowerCase())) return
     setTrackedTopics((current) => [...current, value])
     setNewTopic('')
@@ -745,12 +745,67 @@ function KeywordContent({
   onTopicQueryChange: (value: string) => void
   newTopic: string
   onNewTopicChange: (value: string) => void
-  onAddTopic: () => void
+  onAddTopic: (topic: string) => void
   onRemoveTopic: (topic: string) => void
 }) {
   const [results, setResults] = useState<Record<string, KeywordMonitoringRequest>>({})
   const [retryVersion, setRetryVersion] = useState(0)
+  const [keywordSearchVersion, setKeywordSearchVersion] = useState(0)
+  const [selectedKeyword, setSelectedKeyword] = useState<WorkerKeyword | null>(null)
+  const [newKeywordInputAnchor, setNewKeywordInputAnchor] = useState<HTMLDivElement | null>(null)
+  const [keywordSuggestionRequest, setKeywordSuggestionRequest] = useState<
+    | { query: ''; status: 'idle' }
+    | { query: string; status: 'loading' }
+    | { query: string; status: 'success'; items: WorkerKeyword[] }
+    | { query: string; status: 'error'; message: string }
+  >({ query: '', status: 'idle' })
   const uniqueTopics = useMemo(() => Array.from(new Set(trackedTopics.map((topic) => topic.trim()).filter(Boolean))), [trackedTopics])
+  const trackedKeywordNames = useMemo(() => new Set(uniqueTopics.map((topic) => topic.toLocaleLowerCase())), [uniqueTopics])
+
+  useEffect(() => {
+    const query = newTopic.trim()
+    if (!query) {
+      return
+    }
+
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => {
+      searchKeywords(query, controller.signal)
+        .then((items) => {
+          if (!controller.signal.aborted) setKeywordSuggestionRequest({ query, status: 'success', items })
+        })
+        .catch((error: unknown) => {
+          if (!controller.signal.aborted) {
+            setKeywordSuggestionRequest({
+              query,
+              status: 'error',
+              message: error instanceof Error ? error.message : 'Could not search OpenAlex keywords.',
+            })
+          }
+        })
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [keywordSearchVersion, newTopic])
+
+  const activeKeywordSuggestionRequest = keywordSuggestionRequest.query === newTopic.trim() ? keywordSuggestionRequest : null
+  const keywordSuggestions = activeKeywordSuggestionRequest?.status === 'success' ? activeKeywordSuggestionRequest.items : []
+  const canAddSelectedKeyword = Boolean(selectedKeyword)
+    && !trackedKeywordNames.has((selectedKeyword?.display_name || selectedKeyword?.name || '').toLocaleLowerCase())
+
+  const selectKeyword = (keyword: WorkerKeyword) => {
+    setSelectedKeyword(keyword)
+    onNewTopicChange(keyword.display_name || keyword.name)
+  }
+
+  const addSelectedKeyword = () => {
+    if (!selectedKeyword || !canAddSelectedKeyword) return
+    onAddTopic(selectedKeyword.display_name || selectedKeyword.name)
+    setSelectedKeyword(null)
+  }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -804,18 +859,77 @@ function KeywordContent({
             </IconButton>
           </Box>) : <Typography className="project-list-empty">No tracked keywords found.</Typography>}
         </Box>
-        <Box className="watchlist-actions">
-          <Box className="project-input-frame">
-            <InputBase
-              value={newTopic}
-              onChange={(event) => onNewTopicChange(event.target.value)}
-              onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); onAddTopic() } }}
-              placeholder="New keyword..."
-              inputProps={{ 'aria-label': 'New keyword' }}
-            />
+        <ClickAwayListener onClickAway={() => setKeywordSuggestionRequest({ query: '', status: 'idle' })}>
+          <Box>
+            <Box className="watchlist-actions">
+              <Box className="project-input-frame" ref={setNewKeywordInputAnchor}>
+                <InputBase
+                  value={newTopic}
+                  onChange={(event) => {
+                    const query = event.target.value.trim()
+                    onNewTopicChange(event.target.value)
+                    setSelectedKeyword(null)
+                    setKeywordSuggestionRequest(query ? { query, status: 'loading' } : { query: '', status: 'idle' })
+                  }}
+                  onFocus={() => {
+                    if (newTopic.trim() && keywordSuggestionRequest.status === 'idle') {
+                      setKeywordSuggestionRequest({ query: newTopic.trim(), status: 'loading' })
+                      setKeywordSearchVersion((version) => version + 1)
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') setKeywordSuggestionRequest({ query: '', status: 'idle' })
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      if (selectedKeyword) addSelectedKeyword()
+                      else {
+                        const firstAvailable = keywordSuggestions.find((keyword) => !trackedKeywordNames.has((keyword.display_name || keyword.name).toLocaleLowerCase()))
+                        if (firstAvailable) selectKeyword(firstAvailable)
+                      }
+                    }
+                  }}
+                  placeholder="Search OpenAlex keywords..."
+                  inputProps={{ 'aria-label': 'Search OpenAlex keywords', 'aria-autocomplete': 'list' }}
+                />
+              </Box>
+              <Button variant="contained" disabled={!canAddSelectedKeyword} startIcon={<PlusIcon width={15} height={15} />} onClick={addSelectedKeyword}>Add Keyword</Button>
+            </Box>
+            <Popper
+              open={Boolean(newTopic.trim() && !selectedKeyword && activeKeywordSuggestionRequest && activeKeywordSuggestionRequest.status !== 'idle')}
+              anchorEl={newKeywordInputAnchor}
+              placement="bottom-start"
+              disablePortal
+              className="keyword-suggestion-popper"
+            >
+              <Paper variant="outlined" className="keyword-suggestion-paper" role="listbox" aria-label="OpenAlex keyword suggestions">
+                {activeKeywordSuggestionRequest?.status === 'loading' ? <Typography className="keyword-suggestion-status" role="status">Searching OpenAlex keywords...</Typography>
+                  : activeKeywordSuggestionRequest?.status === 'error' ? <Box className="keyword-suggestion-status" role="alert">
+                    <Typography>{activeKeywordSuggestionRequest.message}</Typography>
+                    <Button size="small" onClick={() => {
+                      setKeywordSuggestionRequest({ query: newTopic.trim(), status: 'loading' })
+                      setKeywordSearchVersion((version) => version + 1)
+                    }}>Retry</Button>
+                  </Box>
+                    : keywordSuggestions.length ? keywordSuggestions.map((keyword) => {
+                      const name = keyword.display_name || keyword.name
+                      const alreadyTracked = trackedKeywordNames.has(name.toLocaleLowerCase())
+                      return <ButtonBase
+                        key={keyword.id || name}
+                        className="keyword-suggestion-option"
+                        role="option"
+                        aria-selected={selectedKeyword?.id === keyword.id}
+                        disabled={alreadyTracked}
+                        disableRipple
+                        onClick={() => selectKeyword(keyword)}
+                      >
+                        <Typography>{name}</Typography>
+                        {alreadyTracked && <Typography>Already added</Typography>}
+                      </ButtonBase>
+                    }) : <Typography className="keyword-suggestion-status">No OpenAlex keywords found.</Typography>}
+              </Paper>
+            </Popper>
           </Box>
-          <Button variant="contained" disabled={!newTopic.trim()} startIcon={<PlusIcon width={15} height={15} />} onClick={onAddTopic}>Add Keyword</Button>
-        </Box>
+        </ClickAwayListener>
       </Paper>
 
       <Paper variant="outlined" className="keyword-results-card">
@@ -825,20 +939,15 @@ function KeywordContent({
           {uniqueTopics.length ? uniqueTopics.map((topic) => {
             const result = results[topic]
             const isLoading = !result
-            return <Paper variant="outlined" className="keyword-result-row" key={topic}>
-            <Box className="keyword-result-header">
+            return <Box className="keyword-result-row" key={topic}>
               <Typography>{topic}</Typography>
-              <Box className="project-count-pill">
-                {isLoading ? 'Loading…' : result.status === 'error' ? 'Unavailable' : `${formatWorkCount(result.data.total)} matches`}
-              </Box>
+              {isLoading ? <Typography className="keyword-result-status" role="status">Searching OpenAlex…</Typography>
+                : result.status === 'error' ? <Box className="keyword-result-error" role="alert">
+                  <Typography className="keyword-result-status">Unavailable</Typography>
+                  <Button size="small" variant="outlined" onClick={() => setRetryVersion((version) => version + 1)}>Retry</Button>
+                </Box>
+                  : <Typography className="keyword-result-status">{formatWorkCount(result.data.total)} matches</Typography>}
             </Box>
-            {isLoading ? <Typography className="keyword-result-status" role="status">Searching OpenAlex…</Typography>
-              : result.status === 'error' ? <Box className="keyword-result-error" role="alert">
-                <Typography className="keyword-result-status">{result.message}</Typography>
-                <Button size="small" variant="outlined" onClick={() => setRetryVersion((version) => version + 1)}>Retry</Button>
-              </Box>
-                : <Typography className="keyword-result-status">Matched publications</Typography>}
-          </Paper>
           }) : <Box className="project-list-empty">Add a keyword to start monitoring publications.</Box>}
         </Box>
       </Paper>

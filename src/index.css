@@ -757,15 +757,22 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 .tracked-keyword-row .MuiIconButton-root:hover { background: var(--hover); }
 .watchlist-actions { display: flex; flex-direction: column; gap: 8px; }
 .watchlist-actions .MuiButton-root { min-height: 38px; border-radius: 19px; font-size: 12px; }
+.keyword-suggestion-popper { z-index: 1300; width: 100%; }
+.keyword-suggestion-paper { max-height: 240px; overflow: auto; padding: 4px; border-color: #e2e5e9 !important; border-radius: 7px !important; box-shadow: 0 8px 20px rgb(20 23 26 / 12%) !important; }
+.keyword-suggestion-option { display: flex; width: 100%; min-height: 36px; justify-content: space-between !important; gap: 8px; padding: 7px 8px; border-radius: 4px; color: #252a2f; text-align: left; }
+.keyword-suggestion-option p { overflow: hidden; color: inherit; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.keyword-suggestion-option p:last-child:not(:first-child) { flex: 0 0 auto; color: #858c95; font-size: 10px; }
+.keyword-suggestion-option.Mui-disabled { color: #858c95; opacity: 1; }
+.keyword-suggestion-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; color: #858c95; font-size: 11px !important; }
+.keyword-suggestion-status .MuiButton-root { min-height: 26px; font-size: 10px; }
 .keyword-results-card .project-card-description { margin-top: -7px; }
-.keyword-result-list { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 10px; overflow: auto; }
-.keyword-result-row { display: flex; min-height: 92px; flex-direction: column; justify-content: space-between; gap: 12px; padding: 14px; border-color: #e2e5e9 !important; border-radius: 9px !important; box-shadow: none !important; }
-.keyword-result-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.keyword-result-header p { overflow: hidden; color: #252a2f; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.keyword-result-status { color: #858c95; font-size: 10px !important; }
+.keyword-result-list { display: flex; min-height: 0; flex: 1; flex-direction: column; overflow: auto; }
+.keyword-result-row { display: flex; min-height: 40px; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px 0 8px; border-bottom: 1px solid #e2e5e9; }
+.keyword-result-row > p:first-child { overflow: hidden; color: #252a2f; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.keyword-result-status { flex: 0 0 auto; color: #858c95; font-size: 10px !important; }
 .keyword-result-error { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; }
 .keyword-result-error .keyword-result-status { min-width: 0; overflow-wrap: anywhere; }
-.keyword-result-error .MuiButton-root { min-height: 28px; flex: 0 0 auto; font-size: 10px; }
+.keyword-result-error .MuiButton-root { min-height: 26px; flex: 0 0 auto; font-size: 10px; }
 
 .members-card { min-width: 0; height: 280px; padding: 16px; }
 .members-toolbar { display: flex; min-width: 0; height: 40px; align-items: center; gap: 12px; }
