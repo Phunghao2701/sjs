@@ -49,7 +49,7 @@ export function AppShell({ activePage, activeProject, projects, projectTab, acco
           </Box>
         </Box>
         <Box className="topbar-divider" />
-        <Box className="page-stage">{children}</Box>
+        <Box className={`page-stage${activePage === 'project-detail' ? ' is-project-detail' : ''}`}>{children}</Box>
       </Box>
     </Box>
   )
