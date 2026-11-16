@@ -192,8 +192,12 @@ async function getJson<T>(path: string, params: Record<string, string | number |
   const forwardCallerAbort = () => requestController.abort(signal?.reason)
   if (signal?.aborted) forwardCallerAbort()
   else signal?.addEventListener('abort', forwardCallerAbort, { once: true })
-  let timeoutId: number | undefined
-  const requestPromise = (async () => {
+  const timeoutId = window.setTimeout(() => {
+    timedOut = true
+    requestController.abort()
+  }, workerRequestTimeoutMs)
+
+  try {
     const response = await fetch(url, {
       headers: { Accept: 'application/json' },
       signal: requestController.signal,
@@ -202,7 +206,7 @@ async function getJson<T>(path: string, params: Record<string, string | number |
     try {
       payload = await response.json() as WorkerEnvelope<T>
     } catch (error) {
-      if (signal?.aborted) throw error
+      if (timedOut || signal?.aborted) throw error
       payload = null
     }
     if (!response.ok || !payload || typeof payload !== 'object') {
@@ -215,24 +219,13 @@ async function getJson<T>(path: string, params: Record<string, string | number |
     }
 
     return payload as T
-  })()
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = window.setTimeout(() => {
-      timedOut = true
-      requestController.abort()
-      reject(new Error('Worker request timed out.'))
-    }, workerRequestTimeoutMs)
-  })
-
-  try {
-    return await Promise.race([requestPromise, timeoutPromise])
   } catch (error) {
     if (timedOut) {
       throw new Error(`Worker request timed out after ${workerRequestTimeoutMs / 1000} seconds. Check that the SJS Worker is running and reachable.`)
     }
     throw error
   } finally {
-    if (timeoutId !== undefined) window.clearTimeout(timeoutId)
+    window.clearTimeout(timeoutId)
     signal?.removeEventListener('abort', forwardCallerAbort)
   }
 }
