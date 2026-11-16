@@ -673,18 +673,22 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 .publication-trend-axis-label { left: 4px; transform: translateY(-50%); }
 .publication-trend-year-label { bottom: 4px; transform: translateX(-50%); }
 .publication-trend-line { fill: none; stroke: #2563eb; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
-.publication-trend-point { position: absolute; width: 8px; height: 8px; transform: translate(-50%, -50%); border: 2px solid #2563eb; border-radius: 50%; background: #fff; }
+.publication-trend-point { position: absolute; width: 8px; height: 8px; transform: translate(-50%, -50%); border: 2px solid #2563eb; border-radius: 50%; background: #fff; cursor: help; }
+.publication-trend-point::before { position: absolute; inset: -6px; content: ''; }
+.publication-trend-point:focus-visible { outline: none; border-color: var(--muted); }
 .subject-area-chart { display: grid; min-height: 0; flex: 1; grid-template-columns: minmax(0, 228fr) minmax(96px, 146fr); align-items: center; gap: 12px; }
 .subject-donut { display: grid; width: auto; height: min(100%, 146px); max-width: 100%; aspect-ratio: 1; place-items: center; justify-self: end; border: 1px solid #e7e9ed; border-radius: 50%; }
 .donut-hole { display: grid; width: 52%; aspect-ratio: 1; place-items: center; border-radius: 50%; background: #fff; }
 .donut-hole span { color: #6b7280; font-size: 11px; }
 .distribution-legend { display: flex; min-width: 0; flex: 1; flex-direction: column; align-self: flex-start; gap: 8px; margin-top: 8px; }
-.distribution-legend-row { display: grid; min-width: 0; min-height: 18px; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; gap: 6px; }
+.distribution-legend-row { display: grid; min-width: 0; min-height: 18px; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; gap: 6px; cursor: help; }
+.distribution-legend-row:focus-visible { outline: 1px solid var(--muted); outline-offset: 1px; border-radius: 4px; }
 .distribution-legend-dot { width: 8px; height: 8px; border-radius: 50%; }
 .distribution-legend-row p { overflow: hidden; color: #171a1e; font-size: 12px; font-weight: 500; line-height: 15px; text-overflow: ellipsis; white-space: nowrap; }
 .distribution-legend-share { color: #6b7280; font-size: 12px; line-height: 15px; }
 .publication-type-chart { display: flex; min-height: 0; flex: 1; align-items: center; gap: 12px; }
 .publication-type-donut { display: grid; width: auto; height: min(100%, 104px); max-width: 100%; aspect-ratio: 1; flex: 0 0 auto; place-items: center; border: 1px solid #e7e9ed; border-radius: 50%; }
+.subject-donut:focus-visible, .publication-type-donut:focus-visible { outline: none; border-color: var(--muted); }
 .project-empty-icon { display: grid; width: 28px; height: 28px; place-items: center; color: #9aa1aa; }
 .project-empty-state p:nth-child(2) { color: #171a1e; font-size: 13px; font-weight: 500; line-height: 16px; }
 .project-empty-state p:nth-child(3) { color: #6b7280; font-size: 11px; line-height: 13px; }

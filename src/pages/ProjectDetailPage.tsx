@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Box, Button, ButtonBase, IconButton, InputBase, MenuItem, Paper, Select, Typography } from '@mui/material'
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import { Box, Button, ButtonBase, IconButton, InputBase, MenuItem, Paper, Select, Tooltip, Typography } from '@mui/material'
 import {
   ChartBarIcon,
   ClockIcon,
@@ -307,7 +307,7 @@ function PublicationTrendChart({ years }: { years: ProjectOverviewData['years'] 
     y: plotBottom - (item.count / tickMax) * (plotBottom - plotTop),
   }))
 
-  return <Box className="publication-trend-chart" role="img" aria-label="Publication counts by year">
+  return <Box className="publication-trend-chart" role="group" aria-label="Publication counts by year">
     <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
       {ticks.map((tick, index) => {
         const y = plotTop + (index / (ticks.length - 1)) * (plotBottom - plotTop)
@@ -324,7 +324,18 @@ function PublicationTrendChart({ years }: { years: ProjectOverviewData['years'] 
     {points.map((point) => <span key={point.year} className="publication-trend-year-label" style={{ left: `${point.x / width * 100}%` }} aria-hidden="true">
       {point.year}
     </span>)}
-    {points.map((point) => <span key={point.year} className="publication-trend-point" style={{ left: `${point.x / width * 100}%`, top: `${point.y / height * 100}%` }} aria-hidden="true" />)}
+    {points.map((point) => {
+      const tooltip = `${point.year}: ${formatWorkCount(point.count)} publications`
+      return <Tooltip key={point.year} title={tooltip} placement="top" arrow>
+        <span
+          className="publication-trend-point"
+          style={{ left: `${point.x / width * 100}%`, top: `${point.y / height * 100}%` }}
+          tabIndex={0}
+          role="img"
+          aria-label={tooltip}
+        />
+      </Tooltip>
+    })}
   </Box>
 }
 
@@ -359,20 +370,75 @@ function Donut({ items, colors, className, centerLabel }: {
   className: string
   centerLabel?: string
 }) {
-  return <Box className={className} style={makeDonutStyle(items, colors)} aria-hidden="true">
-    <Box className="donut-hole">{centerLabel && <span>{centerLabel}</span>}</Box>
-  </Box>
+  const [hoveredItem, setHoveredItem] = useState<DistributionItem | null>(null)
+  const total = items.reduce((sum, item) => sum + item.count, 0)
+  const segments = items.filter((item) => item.count > 0)
+  const tooltip = hoveredItem
+    ? `${hoveredItem.label}: ${formatWorkCount(hoveredItem.count)} publications (${Math.round(hoveredItem.count / total * 100)}%)`
+    : `${formatWorkCount(total)} publications total`
+
+  const handleMouseMove = (event: MouseEvent<HTMLDivElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const centerX = bounds.width / 2
+    const centerY = bounds.height / 2
+    const x = event.clientX - bounds.left - centerX
+    const y = event.clientY - bounds.top - centerY
+    const radius = Math.hypot(x, y)
+    const outerRadius = Math.min(bounds.width, bounds.height) / 2
+
+    if (!total || radius < outerRadius * 0.53 || radius > outerRadius) {
+      setHoveredItem(null)
+      return
+    }
+
+    const anglePercent = ((Math.atan2(y, x) * 180 / Math.PI + 450) % 360) / 360 * 100
+    const gap = segments.length ? 0.55 : 0
+    const available = 100 - gap * segments.length
+    let cursor = 0
+    let match: DistributionItem | null = null
+
+    for (const item of segments) {
+      const end = cursor + item.count / total * available
+      if (anglePercent >= cursor && anglePercent < end) {
+        match = item
+        break
+      }
+      cursor = end + gap
+    }
+
+    setHoveredItem((current) => current?.label === match?.label ? current : match)
+  }
+
+  return <Tooltip title={tooltip} placement="top" arrow>
+    <Box
+      className={className}
+      style={makeDonutStyle(items, colors)}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => setHoveredItem(null)}
+      tabIndex={0}
+      role="img"
+      aria-label={`${formatWorkCount(total)} publications across ${segments.length} categories`}
+    >
+      <Box className="donut-hole">{centerLabel && <span>{centerLabel}</span>}</Box>
+    </Box>
+  </Tooltip>
 }
 
 function Legend({ items, colors }: { items: DistributionItem[]; colors: string[] }) {
   const total = items.reduce((sum, item) => sum + item.count, 0)
 
   return <Box className="distribution-legend">
-    {items.map((item, index) => <Box className="distribution-legend-row" key={item.label}>
-      <span className="distribution-legend-dot" style={{ background: colors[index % colors.length] }} />
-      <Typography title={item.label}>{item.label}</Typography>
-      <span className="distribution-legend-share">{total ? `${Math.round(item.count / total * 100)}%` : '0%'}</span>
-    </Box>)}
+    {items.map((item, index) => {
+      const share = total ? Math.round(item.count / total * 100) : 0
+      const tooltip = `${item.label}: ${formatWorkCount(item.count)} publications (${share}%)`
+      return <Tooltip key={item.label} title={tooltip} placement="top" arrow>
+        <Box className="distribution-legend-row" tabIndex={0} role="img" aria-label={tooltip}>
+          <span className="distribution-legend-dot" style={{ background: colors[index % colors.length] }} />
+          <Typography title={item.label}>{item.label}</Typography>
+          <span className="distribution-legend-share">{share}%</span>
+        </Box>
+      </Tooltip>
+    })}
   </Box>
 }
 
