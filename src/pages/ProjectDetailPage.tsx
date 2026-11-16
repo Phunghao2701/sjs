@@ -111,7 +111,7 @@ export function ProjectDetailPage({ project, activeTab, onTabChange, onProjectTo
     const controller = new AbortController()
     getProjectResearchData(
       project.id,
-      JSON.stringify(['overview-year-range-v1', projectSearch.query, publicationTrendYears]),
+      JSON.stringify(['overview-year-range-v2', projectSearch.query, publicationTrendYears]),
       (signal) => getProjectOverview(projectSearch.query, publicationTrendYears, signal),
       controller.signal,
     )

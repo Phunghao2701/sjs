@@ -6,6 +6,7 @@ import { PageTransition } from './components/PageTransition'
 import { ProjectDetailLoadingSkeleton } from './components/ProjectLoadingSkeletons'
 import { ResearchPulseDesignSystem } from './design-system/ResearchPulseDesignSystem'
 import { CreateProjectPage } from './pages/CreateProjectPage'
+import { AllProjectsPage } from './pages/AllProjectsPage'
 import { OverviewPage } from './pages/OverviewPage'
 import { LoginPage, type SsoLoginStatus } from './pages/LoginPage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
@@ -17,7 +18,7 @@ import { createProjectInFirestore, listMyProjects, type NewProject } from './ser
 import { completeSsoLogin, getSsoConfigurationError, hasSsoCallbackParameters, startSsoLogin } from './services/ssoLogin'
 import { researchPulseTheme } from './theme'
 
-export type AppPage = 'overview' | 'create-project' | 'project-detail'
+export type AppPage = 'overview' | 'all-projects' | 'create-project' | 'project-detail'
 
 type AppRoute = {
   page: AppPage
@@ -30,6 +31,7 @@ const projectTabValues: ProjectTab[] = ['overview', 'news-feed', 'keywords-monit
 function readAppRoute(): AppRoute {
   const params = new URLSearchParams(window.location.search)
   const page = params.get('page')
+  if (page === 'all-projects') return { page, projectId: null, tab: 'overview' }
   if (page === 'create-project') return { page, projectId: null, tab: 'overview' }
 
   const projectId = params.get('projectId')
@@ -49,7 +51,9 @@ function writeAppRoute(route: AppRoute, replace = false) {
   const url = new URL(window.location.href)
   url.pathname = '/'
   url.search = ''
-  if (route.page === 'create-project') {
+  if (route.page === 'all-projects') {
+    url.searchParams.set('page', 'all-projects')
+  } else if (route.page === 'create-project') {
     url.searchParams.set('page', 'create-project')
   } else if (route.page === 'project-detail' && route.projectId) {
     url.searchParams.set('page', 'project-detail')
@@ -79,7 +83,7 @@ function ResearchPulseApp() {
   const [userId, setUserId] = useState<string | null>(null)
   const [authStatus, setAuthStatus] = useState<'loading' | 'ready' | 'error'>(() => firebaseConfigured ? 'loading' : 'error')
   const [authError, setAuthError] = useState(() => firebaseConfigured ? '' : 'Firebase is not configured. Set the Firebase web app variables in .env.local.')
-  const [projectsLoading, setProjectsLoading] = useState(() => readAppRoute().page === 'project-detail')
+  const [projectsLoading, setProjectsLoading] = useState(() => ['all-projects', 'project-detail'].includes(readAppRoute().page))
   const [projectsError, setProjectsError] = useState('')
   const projectRequestVersion = useRef(0)
   const skipDevelopmentAutoSignIn = useRef(false)
@@ -217,7 +221,7 @@ function ResearchPulseApp() {
   }
 
   const handleProjectTopicsChange = (projectId: string, topics: string[]) => {
-    setProjects((current) => current.map((project) => project.id === projectId ? { ...project, topics } : project))
+    setProjects((current) => current.map((project) => project.id === projectId ? { ...project, topics, updatedAt: Date.now() } : project))
   }
 
   const handleNavigate = (page: AppPage) => {
@@ -299,6 +303,15 @@ function ResearchPulseApp() {
         <PageTransition key={`${activePage}-${activeProject?.id ?? ''}`}>
           {activePage === 'overview'
             ? <OverviewPage />
+            : activePage === 'all-projects'
+              ? <AllProjectsPage
+                projects={projects}
+                projectsLoading={projectsLoading}
+                projectsError={projectsError}
+                onRetryProjects={() => { void loadProjects() }}
+                onProjectOpen={handleProjectOpen}
+                onCreateProject={() => handleNavigate('create-project')}
+              />
             : activePage === 'create-project'
               ? <CreateProjectPage
                 projects={projects}
