@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CssBaseline, ThemeProvider } from '@mui/material'
-import { onAuthStateChanged } from 'firebase/auth'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { AppShell } from './components/AppShell'
 import { PageTransition } from './components/PageTransition'
 import { ResearchPulseDesignSystem } from './design-system/ResearchPulseDesignSystem'
 import { CreateProjectPage } from './pages/CreateProjectPage'
 import { OverviewPage } from './pages/OverviewPage'
+import { LoginPage, type SsoLoginStatus } from './pages/LoginPage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import type { LocalProject, ProjectTab } from './types/project'
 import { auth, ensureDevelopmentEmulatorUser, firebaseConfigured, firebaseEmulatorsEnabled } from './services/firebase'
 import { createProjectInFirestore, listMyProjects, type NewProject } from './services/projectStore'
+import { completeSsoLogin, getSsoConfigurationError, hasSsoCallbackParameters, startSsoLogin } from './services/ssoLogin'
 import { researchPulseTheme } from './theme'
 
 export type AppPage = 'overview' | 'create-project' | 'project-detail'
@@ -38,6 +40,11 @@ function ResearchPulseApp() {
   const [projectsLoading, setProjectsLoading] = useState(false)
   const [projectsError, setProjectsError] = useState('')
   const projectRequestVersion = useRef(0)
+  const skipDevelopmentAutoSignIn = useRef(false)
+  const ssoCallbackHandled = useRef(false)
+  const [ssoStatus, setSsoStatus] = useState<SsoLoginStatus>('idle')
+  const [ssoError, setSsoError] = useState('')
+  const developmentAutoLoginEnabled = firebaseEmulatorsEnabled && import.meta.env.VITE_DEV_AUTH_AUTO_LOGIN !== 'false'
 
   const loadProjects = useCallback(async () => {
     const requestVersion = ++projectRequestVersion.current
@@ -81,7 +88,7 @@ function ResearchPulseApp() {
         }
 
         void loadProjects()
-        if (firebaseEmulatorsEnabled) {
+        if (developmentAutoLoginEnabled && !skipDevelopmentAutoSignIn.current) {
           setAuthStatus('loading')
           void ensureDevelopmentEmulatorUser().catch((error: unknown) => {
             if (!mounted) return
@@ -98,7 +105,7 @@ function ResearchPulseApp() {
       })
     }
 
-    if (firebaseEmulatorsEnabled) {
+    if (developmentAutoLoginEnabled) {
       void ensureDevelopmentEmulatorUser().then(() => {
         if (mounted) subscribeToAuthChanges()
       }).catch((error: unknown) => {
@@ -114,7 +121,20 @@ function ResearchPulseApp() {
       mounted = false
       unsubscribe?.()
     }
-  }, [loadProjects])
+  }, [developmentAutoLoginEnabled, loadProjects])
+
+  useEffect(() => {
+    if (ssoCallbackHandled.current || !hasSsoCallbackParameters()) return
+    ssoCallbackHandled.current = true
+    setSsoStatus('processing')
+    setSsoError('')
+    void completeSsoLogin().then(() => {
+      setSsoStatus('success')
+    }).catch((error: unknown) => {
+      setSsoStatus('error')
+      setSsoError(error instanceof Error ? error.message : 'HyperDataLab sign-in failed. Please try again.')
+    })
+  }, [])
 
   const handleProjectCreate = async (projectDraft: NewProject) => {
     const project = await createProjectInFirestore(projectDraft)
@@ -131,9 +151,61 @@ function ResearchPulseApp() {
     setActivePage('project-detail')
   }
 
+  const handleSsoSignIn = async () => {
+    setSsoError('')
+    setSsoStatus('starting')
+    try {
+      await startSsoLogin()
+    } catch (error) {
+      setSsoStatus('error')
+      setSsoError(error instanceof Error ? error.message : 'Could not start HyperDataLab sign-in.')
+    }
+  }
+
+  const handleLogout = async () => {
+    if (firebaseEmulatorsEnabled) skipDevelopmentAutoSignIn.current = true
+    try {
+      await signOut(auth)
+      setActivePage('overview')
+      setActiveProject(null)
+      setProjectTab('overview')
+    } catch (error) {
+      skipDevelopmentAutoSignIn.current = false
+      setAuthError(error instanceof Error ? error.message : 'Could not sign out.')
+    }
+  }
+
   const projectStorageMessage = authStatus === 'loading'
     ? 'Connecting to Firebase...'
     : authError || (userId ? 'Projects save to Firestore.' : 'Sign in to save projects.')
+
+  if (authStatus !== 'ready' || !userId) {
+    const ssoConfigurationError = getSsoConfigurationError()
+    const loginSetupMessage = !firebaseConfigured
+      ? authError || 'Firebase is not configured. Set the Firebase web app variables in .env.local.'
+      : ssoConfigurationError
+    const loginError = ssoError || (authStatus === 'error' && firebaseConfigured ? authError : '')
+    const loginStatus = ssoStatus !== 'idle'
+      ? ssoStatus
+      : authStatus === 'loading'
+        ? 'checking'
+        : loginError
+          ? 'error'
+          : 'idle'
+
+    return (
+      <ThemeProvider theme={researchPulseTheme}>
+        <CssBaseline />
+        <LoginPage
+          status={loginStatus}
+          error={loginError}
+          setupMessage={loginSetupMessage}
+          canSignIn={firebaseConfigured && !ssoConfigurationError}
+          onSignIn={() => { void handleSsoSignIn() }}
+        />
+      </ThemeProvider>
+    )
+  }
 
   return (
     <ThemeProvider theme={researchPulseTheme}>
@@ -146,6 +218,7 @@ function ResearchPulseApp() {
         accountEmail={auth.currentUser?.email ?? 'user@example.com'}
         onNavigate={setActivePage}
         onProjectOpen={handleProjectOpen}
+        onLogout={() => { void handleLogout() }}
       >
         <PageTransition key={`${activePage}-${activeProject?.id ?? ''}`}>
           {activePage === 'overview'

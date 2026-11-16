@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Box, IconButton, Popover, Tooltip, Typography } from '@mui/material'
+import { Box, ButtonBase, IconButton, Popover, Tooltip, Typography } from '@mui/material'
 import {
   ArrowRightOnRectangleIcon,
   ChevronRightIcon,
@@ -9,7 +9,7 @@ import {
   UserIcon,
 } from '@heroicons/react/24/outline'
 
-export function AccountMenu({ email }: { email: string }) {
+export function AccountMenu({ email, onLogout }: { email: string; onLogout: () => void }) {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
   const open = Boolean(anchorEl)
 
@@ -74,10 +74,20 @@ export function AccountMenu({ email }: { email: string }) {
           <Box className="account-menu-spacer account-menu-spacer-small" aria-hidden="true" />
           <Box className="account-menu-divider" />
           <Box className="account-menu-spacer account-menu-spacer-small" aria-hidden="true" />
-          <Box className="account-menu-item account-menu-logout">
+          <ButtonBase
+            component="button"
+            type="button"
+            disableRipple
+            className="account-menu-item account-menu-logout"
+            aria-label="Log out"
+            onClick={() => {
+              setAnchorEl(null)
+              onLogout()
+            }}
+          >
             <ArrowRightOnRectangleIcon aria-hidden="true" />
             <span>Log out</span>
-          </Box>
+          </ButtonBase>
         </Box>
       </Popover>
     </>

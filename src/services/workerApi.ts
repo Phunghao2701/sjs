@@ -201,6 +201,23 @@ export async function getProjectOverview(query: string, signal?: AbortSignal) {
   return unwrap(response)
 }
 
+export async function exchangeSsoAccessTokenForFirebaseCustomToken(accessToken: string) {
+  const response = await fetch(apiUrl('/api/v1/auth/sso/custom-token'), {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ accessToken }),
+    credentials: 'omit',
+  })
+  const payload = await response.json().catch(() => null) as { customToken?: unknown; error?: unknown } | null
+  if (!response.ok || typeof payload?.customToken !== 'string') {
+    throw new Error(typeof payload?.error === 'string' ? payload.error : `Worker request failed (${response.status}).`)
+  }
+  return payload.customToken
+}
+
 export async function searchFilterValues(entity: FilterValueEntity, query: string, filters: Record<string, string> = {}, signal?: AbortSignal) {
   const response = await getJson<WorkerEnvelope<WorkerFilterValue[]>>(
     '/api/v1/catalog/filter-values',

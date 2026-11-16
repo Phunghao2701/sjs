@@ -14,10 +14,11 @@ type AppShellProps = {
   accountEmail: string
   onNavigate: (page: AppPage) => void
   onProjectOpen: (project: LocalProject, tab: ProjectTab) => void
+  onLogout: () => void
   children: ReactNode
 }
 
-export function AppShell({ activePage, activeProject, projects, projectTab, accountEmail, onNavigate, onProjectOpen, children }: AppShellProps) {
+export function AppShell({ activePage, activeProject, projects, projectTab, accountEmail, onNavigate, onProjectOpen, onLogout, children }: AppShellProps) {
   return (
     <Box className="app-shell">
       <Sidebar
@@ -44,7 +45,7 @@ export function AppShell({ activePage, activeProject, projects, projectTab, acco
                 <BellIcon width={19} height={19} />
               </IconButton>
             </Tooltip>
-            <AccountMenu email={accountEmail} />
+            <AccountMenu email={accountEmail} onLogout={onLogout} />
           </Box>
         </Box>
         <Box className="topbar-divider" />
