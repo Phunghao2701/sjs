@@ -8,7 +8,7 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 import type { LocalProject, ProjectTab } from '../types/project'
-import { getProjectOverview, type WorkerProjectOverview } from '../services/workerApi'
+import { getProjectOverview, searchResearch, type ApiPagination, type WorkerProjectOverview, type WorkerWork } from '../services/workerApi'
 
 const projectTabs: { label: string; value: ProjectTab }[] = [
   { label: 'Overview', value: 'overview' },
@@ -16,12 +16,7 @@ const projectTabs: { label: string; value: ProjectTab }[] = [
   { label: 'Keywords & Monitoring', value: 'keywords-monitoring' },
   { label: 'Members', value: 'members' },
 ]
-
-const publications = [
-  { type: 'Journal article', year: 2026, title: 'Deep learning for medical image analysis: a systematic review', keyword: 'Deep Learning' },
-  { type: 'Conference paper', year: 2025, title: 'Neural network architectures in diagnostic imaging', keyword: 'Neural Networks' },
-  { type: 'Journal article', year: 2025, title: 'Artificial intelligence in clinical image interpretation', keyword: 'Medical Imaging' },
-]
+const currentPublicationYear = new Date().getFullYear()
 
 type ProjectDetailPageProps = {
   project: LocalProject
@@ -43,6 +38,10 @@ type ProjectOverviewData = {
 
 type ProjectOverviewRequest =
   | { key: string; status: 'success'; data: ProjectOverviewData }
+  | { key: string; status: 'error'; message: string }
+
+type NewsFeedRequest =
+  | { key: string; status: 'success'; works: WorkerWork[]; total: number; pagination?: ApiPagination }
   | { key: string; status: 'error'; message: string }
 
 function buildProjectSearch(topics: string[], subject: string) {
@@ -74,8 +73,6 @@ function buildProjectOverview(overview: WorkerProjectOverview): ProjectOverviewD
 
 export function ProjectDetailPage({ project, activeTab, onTabChange }: ProjectDetailPageProps) {
   const projectTabsRef = useRef<HTMLElement | null>(null)
-  const [publicationQuery, setPublicationQuery] = useState('')
-  const [publicationYear, setPublicationYear] = useState('All years')
   const [trackedTopics, setTrackedTopics] = useState(project.topics)
   const [topicQuery, setTopicQuery] = useState('')
   const [newTopic, setNewTopic] = useState('')
@@ -126,15 +123,6 @@ export function ProjectDetailPage({ project, activeTab, onTabChange }: ProjectDe
     }
   }, [activeTab])
 
-  const visiblePublications = useMemo(() => {
-    const query = publicationQuery.trim().toLocaleLowerCase()
-    return publications.filter((publication) => {
-      const matchesQuery = !query || `${publication.title} ${publication.keyword}`.toLocaleLowerCase().includes(query)
-      const matchesYear = publicationYear === 'All years' || String(publication.year) === publicationYear
-      return matchesQuery && matchesYear
-    })
-  }, [publicationQuery, publicationYear])
-
   const visibleTopics = useMemo(() => {
     const query = topicQuery.trim().toLocaleLowerCase()
     return trackedTopics.filter((topic) => topic.toLocaleLowerCase().includes(query))
@@ -178,12 +166,9 @@ export function ProjectDetailPage({ project, activeTab, onTabChange }: ProjectDe
         onRetry={() => setOverviewRequestVersion((version) => version + 1)}
       />}
       {activeTab === 'news-feed' && <NewsFeedContent
+        projectId={project.id}
         topics={trackedTopics}
-        publicationQuery={publicationQuery}
-        onPublicationQueryChange={setPublicationQuery}
-        publicationYear={publicationYear}
-        onPublicationYearChange={setPublicationYear}
-        visiblePublications={visiblePublications}
+        projectQuery={projectSearch.query}
       />}
       {activeTab === 'keywords-monitoring' && <KeywordContent
         trackedTopics={trackedTopics}
@@ -629,53 +614,122 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   </Box>
 }
 
-type VisiblePublication = typeof publications[number]
+function formatPublicationType(type: string) {
+  const label = type.trim().replace(/[-_]+/g, ' ')
+  return label ? label.replace(/\b\w/g, (character) => character.toUpperCase()) : 'Publication'
+}
 
-function NewsFeedContent({
-  topics,
-  publicationQuery,
-  onPublicationQueryChange,
-  publicationYear,
-  onPublicationYearChange,
-  visiblePublications,
-}: {
+function NewsFeedContent({ projectId, topics, projectQuery }: {
+  projectId: string
   topics: string[]
-  publicationQuery: string
-  onPublicationQueryChange: (value: string) => void
-  publicationYear: string
-  onPublicationYearChange: (value: string) => void
-  visiblePublications: VisiblePublication[]
+  projectQuery: string
 }) {
+  const pageSize = 10
+  const [publicationQuery, setPublicationQuery] = useState('')
+  const [publicationYear, setPublicationYear] = useState('All years')
+  const [page, setPage] = useState(1)
+  const [requestVersion, setRequestVersion] = useState(0)
+  const [request, setRequest] = useState<NewsFeedRequest | null>(null)
   const matchedTopics = topics.length ? topics : ['No tracked keywords']
+  const query = publicationQuery.trim() || projectQuery
+  const requestKey = JSON.stringify([projectId, query, publicationYear, page, requestVersion])
+  const activeRequest = request?.key === requestKey ? request : null
+  const works = activeRequest?.status === 'success' ? activeRequest.works : []
+  const total = activeRequest?.status === 'success' ? activeRequest.total : 0
+  const totalPages = activeRequest?.status === 'success'
+    ? activeRequest.pagination?.total_pages ?? Math.ceil(total / pageSize)
+    : 0
+  const loading = activeRequest === null
+  const error = activeRequest?.status === 'error' ? activeRequest.message : ''
+  const yearOptions = Array.from({ length: 15 }, (_, index) => String(currentPublicationYear - index))
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => {
+      searchResearch('Works', {
+        query,
+        page,
+        limit: pageSize,
+        sortBy: 'publication_year',
+        sortOrder: 'desc',
+        publication_year: publicationYear === 'All years' ? undefined : publicationYear,
+        include_facets: 0,
+      }, controller.signal)
+        .then((result) => setRequest({
+          key: requestKey,
+          status: 'success',
+          works: result.items as WorkerWork[],
+          total: result.total,
+          pagination: result.pagination,
+        }))
+        .catch((requestError: unknown) => {
+          if (!controller.signal.aborted) {
+            setRequest({
+              key: requestKey,
+              status: 'error',
+              message: requestError instanceof Error ? requestError.message : 'Could not load OpenAlex publications.',
+            })
+          }
+        })
+    }, 300)
+
+    return () => {
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [page, pageSize, projectId, publicationYear, query, requestKey])
 
   return <Box className="project-tab-content">
     <Box className="project-tab-intro">
       <Typography component="h2" className="project-section-heading">Scientific News Feed</Typography>
-      <Box className="project-count-pill">128 articles</Box>
+      <Box className="project-count-pill">
+        {loading ? 'Loading…' : error ? 'Unavailable' : `${formatWorkCount(total)} articles`}
+      </Box>
     </Box>
     <Box className="news-feed-grid">
       <Paper variant="outlined" className="news-publications-card">
         <Box className="project-input-frame">
           <InputBase
             value={publicationQuery}
-            onChange={(event) => onPublicationQueryChange(event.target.value)}
-            placeholder="Search title or research keyword..."
-            inputProps={{ 'aria-label': 'Search publications' }}
+            onChange={(event) => {
+              setPublicationQuery(event.target.value)
+              setPage(1)
+            }}
+            placeholder="Search OpenAlex publications..."
+            inputProps={{ 'aria-label': 'Search OpenAlex publications' }}
           />
         </Box>
         <Box className="publication-list-heading">
           <Typography>Recent Publications</Typography>
-          <Typography>Newest first</Typography>
+          <Typography>{activeRequest?.status === 'success' ? `${works.length} shown · Newest first` : 'Newest first'}</Typography>
         </Box>
-        <Box className="project-publication-list">
-          {visiblePublications.length ? visiblePublications.map((publication) => <Box className="project-publication" key={publication.title}>
-            <Box className="project-publication-meta">
-              <Typography>{publication.type}</Typography>
-              <Typography>{publication.year}</Typography>
+        <Box className="project-publication-list" aria-live="polite">
+          {loading ? <Box className="project-list-empty" role="status">Loading publications from OpenAlex…</Box>
+            : error ? <Box className="project-feed-error" role="alert">
+              <Typography>{error}</Typography>
+              <Button size="small" variant="outlined" onClick={() => setRequestVersion((version) => version + 1)}>Retry</Button>
             </Box>
-            <Typography component="h3">{publication.title}</Typography>
-            <Box className="project-topic-pill">{publication.keyword}</Box>
-          </Box>) : <Box className="project-list-empty">No publications match this search.</Box>}
+              : works.length ? works.map((work) => {
+                const authors = work.authors.map((author) => author.name).filter(Boolean).slice(0, 3).join(', ')
+                const details = [authors, work.journal_name].filter(Boolean).join(' · ')
+                const workType = formatPublicationType(work.type)
+                return <Box className="project-publication" key={work.id}>
+                  <Box className="project-publication-meta">
+                    <Typography>{workType}</Typography>
+                    <Typography>{work.publication_year ?? 'Year unavailable'}</Typography>
+                  </Box>
+                  <Typography component="h3">{work.title || 'Untitled publication'}</Typography>
+                  {details && <Typography className="project-publication-details">{details}</Typography>}
+                  {work.subject_area?.name && <Box className="project-topic-pill">{work.subject_area.name}</Box>}
+                </Box>
+              }) : <Box className="project-list-empty">No OpenAlex publications match this search.</Box>}
+        </Box>
+        <Box className="publication-pagination">
+          <Typography>{loading ? 'Loading results…' : totalPages ? `Page ${page} of ${totalPages}` : 'No pages'}</Typography>
+          <Box>
+            <Button size="small" disabled={page <= 1 || loading} onClick={() => setPage((current) => Math.max(1, current - 1))}>Previous</Button>
+            <Button size="small" disabled={!totalPages || page >= totalPages || loading} onClick={() => setPage((current) => current + 1)}>Next</Button>
+          </Box>
         </Box>
       </Paper>
 
@@ -684,12 +738,15 @@ function NewsFeedContent({
         <Typography className="news-filter-label">Publication year</Typography>
         <Select
           value={publicationYear}
-          onChange={(event) => onPublicationYearChange(event.target.value)}
+          onChange={(event) => {
+            setPublicationYear(event.target.value)
+            setPage(1)
+          }}
           size="small"
           className="publication-year-select"
           inputProps={{ 'aria-label': 'Publication year' }}
         >
-          {['All years', '2026', '2025'].map((year) => <MenuItem value={year} key={year}>{year}</MenuItem>)}
+          {['All years', ...yearOptions].map((year) => <MenuItem value={year} key={year}>{year}</MenuItem>)}
         </Select>
         <Box className="news-filter-divider" />
         <Typography className="news-filter-label">Matched keywords</Typography>
