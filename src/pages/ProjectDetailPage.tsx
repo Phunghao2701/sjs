@@ -89,6 +89,7 @@ export function ProjectDetailPage({ project, activeTab, onTabChange, onProjectTo
   const [trackedTopics, setTrackedTopics] = useState(project.topics)
   const [topicQuery, setTopicQuery] = useState('')
   const [memberQuery, setMemberQuery] = useState('')
+  const [publicationTrendYears, setPublicationTrendYears] = useState(5)
   const [topicsSaving, setTopicsSaving] = useState(false)
   const [topicsSaveError, setTopicsSaveError] = useState('')
   const [overviewRequestVersion, setOverviewRequestVersion] = useState(0)
@@ -195,6 +196,8 @@ export function ProjectDetailPage({ project, activeTab, onTabChange, onProjectTo
         data={overviewData}
         loading={overviewLoading}
         error={overviewError}
+        publicationTrendYears={publicationTrendYears}
+        onPublicationTrendYearsChange={setPublicationTrendYears}
         onRetry={() => setOverviewRequestVersion((version) => version + 1)}
       />}
       {activeTab === 'news-feed' && <NewsFeedContent
@@ -226,12 +229,16 @@ function OverviewContent({
   data,
   loading,
   error,
+  publicationTrendYears,
+  onPublicationTrendYearsChange,
   onRetry,
 }: {
   topics: string[]
   data: ProjectOverviewData | null
   loading: boolean
   error: string
+  publicationTrendYears: number
+  onPublicationTrendYearsChange: (years: number) => void
   onRetry: () => void
 }) {
   const growthRate = data?.growthRate
@@ -254,14 +261,26 @@ function OverviewContent({
     </Box>
     <Box className="project-chart-grid">
       <Paper variant="outlined" className="project-chart-card publication-trend-card">
-        <Typography component="h3">Publication Trend</Typography>
+        <Box className="publication-trend-heading">
+          <Typography component="h3">Publication Trend</Typography>
+          <Select
+            value={publicationTrendYears}
+            onChange={(event) => onPublicationTrendYearsChange(Number(event.target.value))}
+            size="small"
+            className="trend-year-select"
+            disabled={loading || Boolean(error) || !data?.years.length}
+            inputProps={{ 'aria-label': 'Years shown in publication trend' }}
+          >
+            {[1, 3, 5].map((years) => <MenuItem value={years} key={years}>{years} {years === 1 ? 'year' : 'years'}</MenuItem>)}
+          </Select>
+        </Box>
         <Typography className="project-card-description">Related publications over time</Typography>
         {loading
           ? <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="Loading project data" description="Fetching publication metrics from OpenAlex." />
           : error
             ? <OverviewErrorState message={error} onRetry={onRetry} />
             : data?.years.length
-              ? <PublicationTrendChart years={data.years} />
+              ? <PublicationTrendChart years={data.years.slice(-publicationTrendYears)} />
               : <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="Waiting for publication data" description="Related publication trends will appear here." />}
       </Paper>
       <Paper variant="outlined" className="project-chart-card subject-distribution-card">

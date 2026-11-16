@@ -660,6 +660,10 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 .project-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .project-chart-card { display: flex; min-width: 0; min-height: 0; flex-direction: column; gap: 8px; overflow: hidden; padding: 14px; }
 .project-chart-card h3, .news-filter-card h3, .watchlist-card h3, .keyword-results-card h3 { margin: 0; color: #171a1e; font-size: 15px; font-weight: 600; line-height: 18px; }
+.publication-trend-heading { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; }
+.trend-year-select.MuiInputBase-root { height: 30px; border-radius: 6px; color: #626972; font-size: 11px; }
+.trend-year-select .MuiSelect-select { min-height: 0 !important; padding: 6px 26px 6px 9px !important; }
+.trend-year-select .MuiOutlinedInput-notchedOutline { border-color: #e2e5e9; }
 .project-card-description { color: #6b7280; font-size: 12px !important; line-height: 15px !important; }
 .project-empty-state { display: flex; min-height: 0; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #8c94a3; text-align: center; }
 .project-overview-error { display: flex; min-height: 0; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 9px; color: #626972; text-align: center; }
