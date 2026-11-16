@@ -75,7 +75,7 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
   padding: 0 16px;
   border-bottom: 1px solid var(--stroke-soft);
 }
-.sidebar-brand-mark { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border-radius: 10px; color: #fff; background: #171a1e; font-size: 23px; font-weight: 600; }
+.sidebar-brand-mark { display: block; width: 38px; height: 38px; flex: 0 0 38px; object-fit: contain; }
 .sidebar-brand-copy { min-width: 0; }
 .sidebar-brand-name { color: #171a1e; font-size: 16px; font-weight: 700; line-height: 18px; }
 .sidebar-brand-description { color: #7a828a; font-size: 10.5px; line-height: 13px; white-space: nowrap; }

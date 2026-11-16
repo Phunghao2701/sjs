@@ -25,7 +25,7 @@ export function LoginPage({ status, error, setupMessage, canSignIn, onSignIn }: 
   return (
     <Box component="main" aria-busy={busy} sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', p: { xs: 2, sm: 3 }, bgcolor: 'var(--app-bg)' }}>
       <Paper variant="outlined" sx={{ width: '100%', maxWidth: 432, p: { xs: 3, sm: 4 }, borderColor: 'var(--stroke)', borderRadius: 'var(--radius-card)', bgcolor: 'var(--surface)', boxShadow: 'none' }}>
-        <Box aria-hidden="true" sx={{ width: 40, height: 40, display: 'grid', placeItems: 'center', mb: 3, borderRadius: '10px', bgcolor: 'var(--ink)', color: '#fff', fontSize: 22, fontWeight: 600 }}>S</Box>
+        <Box component="img" src="/Cyan_folded-ribbon_T_favicon.png" alt="" aria-hidden="true" sx={{ width: 40, height: 40, display: 'block', objectFit: 'contain', mb: 3 }} />
         <Typography component="h1" sx={{ color: 'var(--ink)', fontSize: 23, fontWeight: 600, lineHeight: 1.25 }}>
           Sign in to SJS
         </Typography>

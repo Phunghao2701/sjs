@@ -43,7 +43,7 @@ export function Sidebar({ activePage, activeProject, projects, projectTab, onNav
   return (
     <Box component="aside" className="sidebar">
       <Box className="sidebar-brand">
-        <Box className="sidebar-brand-mark" aria-hidden="true">S</Box>
+        <Box component="img" className="sidebar-brand-mark" src="/Cyan_folded-ribbon_T_favicon.png" alt="" aria-hidden="true" />
         <Box className="sidebar-brand-copy">
           <Typography component="div" className="sidebar-brand-name">SJS</Typography>
           <Typography component="div" className="sidebar-brand-description">Scientific Journal System</Typography>
