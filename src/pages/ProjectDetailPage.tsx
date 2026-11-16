@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
-import { Box, Button, ButtonBase, IconButton, InputBase, MenuItem, Paper, Select, Typography } from '@mui/material'
+import { useEffect, useMemo, useRef, useState, type FocusEvent, type MouseEvent, type ReactNode } from 'react'
+import { Box, Button, ButtonBase, IconButton, InputBase, MenuItem, Paper, Popper, Select, Typography } from '@mui/material'
 import {
   ChartBarIcon,
   ClockIcon,
@@ -291,8 +291,52 @@ function OverviewErrorState({ message, onRetry }: { message: string; onRetry: ()
   </Box>
 }
 
+type ChartPopoverDetails = {
+  title: string
+  color: string
+  label: string
+  value?: string
+}
+
+type ChartPopoverData = ChartPopoverDetails & { x: number; y: number }
+
+function popoverAtPointer(event: MouseEvent<HTMLElement>, details: ChartPopoverDetails): ChartPopoverData {
+  return { ...details, x: event.clientX, y: event.clientY }
+}
+
+function popoverAtFocus<T extends Element>(event: FocusEvent<T>, details: ChartPopoverDetails): ChartPopoverData {
+  const bounds = event.currentTarget.getBoundingClientRect()
+  return { ...details, x: bounds.left + bounds.width / 2, y: bounds.top }
+}
+
+function ChartHoverPopover({ data }: { data: ChartPopoverData | null }) {
+  const anchorEl = data ? { getBoundingClientRect: () => new DOMRect(data.x, data.y, 0, 0) } : null
+
+  return <Popper
+    className="chart-hover-popover-popper"
+    open={Boolean(data)}
+    anchorEl={anchorEl}
+    placement="top"
+    popperOptions={{ strategy: 'fixed' }}
+    modifiers={[
+      { name: 'offset', options: { offset: [0, 10] } },
+      { name: 'preventOverflow', options: { padding: 8 } },
+    ]}
+  >
+    {data && <Paper className="chart-hover-popover" role="tooltip" elevation={0}>
+      <Typography component="p" className="chart-hover-popover-title">{data.title}</Typography>
+      <Box className="chart-hover-popover-row">
+        <span className="chart-hover-popover-dot" style={{ backgroundColor: data.color }} />
+        <Typography component="p" className="chart-hover-popover-label">{data.label}</Typography>
+        {data.value && <strong className="chart-hover-popover-value">{data.value}</strong>}
+      </Box>
+    </Paper>}
+  </Popper>
+}
+
 function PublicationTrendChart({ years }: { years: ProjectOverviewData['years'] }) {
   const [hoveredYear, setHoveredYear] = useState<number | null>(null)
+  const [popover, setPopover] = useState<ChartPopoverData | null>(null)
   const width = 662
   const height = 168
   const maxCount = Math.max(...years.map((item) => item.count), 1)
@@ -308,45 +352,60 @@ function PublicationTrendChart({ years }: { years: ProjectOverviewData['years'] 
     y: plotBottom - (item.count / tickMax) * (plotBottom - plotTop),
   }))
 
-  return <Box className="publication-trend-chart" role="group" aria-label="Publication counts by year">
-    <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
+  return <>
+    <Box className="publication-trend-chart" role="group" aria-label="Publication counts by year">
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
+        {ticks.map((tick, index) => {
+          const y = plotTop + (index / (ticks.length - 1)) * (plotBottom - plotTop)
+          return <line key={tick} x1={plotLeft} x2={plotRight} y1={y} y2={y} className="publication-trend-gridline" />
+        })}
+        <polyline points={points.map((point) => `${point.x},${point.y}`).join(' ')} className="publication-trend-line" />
+      </svg>
       {ticks.map((tick, index) => {
         const y = plotTop + (index / (ticks.length - 1)) * (plotBottom - plotTop)
-        return <line key={tick} x1={plotLeft} x2={plotRight} y1={y} y2={y} className="publication-trend-gridline" />
+        return <span key={tick} className="publication-trend-axis-label" style={{ top: `${y / height * 100}%` }} aria-hidden="true">
+          {formatTrendTick(tick)}
+        </span>
       })}
-      <polyline points={points.map((point) => `${point.x},${point.y}`).join(' ')} className="publication-trend-line" />
-    </svg>
-    {ticks.map((tick, index) => {
-      const y = plotTop + (index / (ticks.length - 1)) * (plotBottom - plotTop)
-      return <span key={tick} className="publication-trend-axis-label" style={{ top: `${y / height * 100}%` }} aria-hidden="true">
-        {formatTrendTick(tick)}
-      </span>
-    })}
-    {points.map((point) => <span key={point.year} className="publication-trend-year-label" style={{ left: `${point.x / width * 100}%` }} aria-hidden="true">
-      {point.year}
-    </span>)}
-    {points.map((point) => {
-      const isActive = hoveredYear === point.year
-      return <Fragment key={point.year}>
-        {isActive && <span
-          className="publication-trend-point-value"
-          style={{ left: `${point.x / width * 100}%`, top: `${point.y / height * 100}%` }}
-          aria-hidden="true"
-        >{formatWorkCount(point.count)}</span>}
-        <span
-          className={`publication-trend-point${isActive ? ' is-active' : ''}`}
-          style={{ left: `${point.x / width * 100}%`, top: `${point.y / height * 100}%` }}
-          tabIndex={0}
-          role="img"
-          aria-label={`${point.year}: ${formatWorkCount(point.count)} publications`}
-          onMouseEnter={() => setHoveredYear(point.year)}
-          onMouseLeave={() => setHoveredYear(null)}
-          onFocus={() => setHoveredYear(point.year)}
-          onBlur={() => setHoveredYear(null)}
-        />
-      </Fragment>
-    })}
-  </Box>
+      {points.map((point) => <span key={point.year} className="publication-trend-year-label" style={{ left: `${point.x / width * 100}%` }} aria-hidden="true">
+        {point.year}
+      </span>)}
+      {points.map((point) => {
+        const isActive = hoveredYear === point.year
+        const details = {
+          title: String(point.year),
+          color: '#2563eb',
+          label: `${formatWorkCount(point.count)} publications`,
+        }
+      return <span
+        key={point.year}
+        className={`publication-trend-point${isActive ? ' is-active' : ''}`}
+        style={{ left: `${point.x / width * 100}%`, top: `${point.y / height * 100}%` }}
+        tabIndex={0}
+        role="img"
+        aria-label={`${point.year}: ${formatWorkCount(point.count)} publications`}
+        onMouseEnter={(event) => {
+          setHoveredYear(point.year)
+          setPopover(popoverAtPointer(event, details))
+        }}
+        onMouseMove={(event) => setPopover(popoverAtPointer(event, details))}
+        onMouseLeave={() => {
+          setHoveredYear(null)
+          setPopover(null)
+        }}
+        onFocus={(event) => {
+          setHoveredYear(point.year)
+          setPopover(popoverAtFocus(event, details))
+        }}
+        onBlur={() => {
+          setHoveredYear(null)
+          setPopover(null)
+        }}
+      />
+      })}
+    </Box>
+    <ChartHoverPopover data={popover} />
+  </>
 }
 
 function formatTrendTick(value: number) {
@@ -396,13 +455,14 @@ function donutSegmentPath(startPercent: number, endPercent: number) {
   return `M ${outerStart.x} ${outerStart.y} A 49 49 0 ${largeArc} 1 ${outerEnd.x} ${outerEnd.y} L ${innerEnd.x} ${innerEnd.y} A 25.5 25.5 0 ${largeArc} 0 ${innerStart.x} ${innerStart.y} Z`
 }
 
-function Donut({ items, colors, className, centerLabel, hoveredIndex, onHoveredIndexChange }: {
+function Donut({ items, colors, className, centerLabel, hoveredIndex, onHoveredIndexChange, onPopoverChange }: {
   items: DistributionItem[]
   colors: string[]
   className: string
   centerLabel?: string
   hoveredIndex: number | null
   onHoveredIndexChange: (index: number | null) => void
+  onPopoverChange: (data: ChartPopoverData | null) => void
 }) {
   const total = items.reduce((sum, item) => sum + item.count, 0)
   const segments = getDonutSegments(items)
@@ -420,66 +480,71 @@ function Donut({ items, colors, className, centerLabel, hoveredIndex, onHoveredI
     const radius = Math.hypot(x, y)
     const outerRadius = Math.min(bounds.width, bounds.height) / 2
 
-    if (!total || radius < outerRadius * 0.53 || radius > outerRadius) {
+    if (!total || radius < outerRadius * 0.48 || radius > outerRadius * 1.08) {
       onHoveredIndexChange(null)
+      onPopoverChange(null)
       return
     }
 
     const anglePercent = ((Math.atan2(y, x) * 180 / Math.PI + 450) % 360) / 360 * 100
     const match = segments.find(({ start, end }) => anglePercent >= start && anglePercent < end)
     onHoveredIndexChange(match?.index ?? null)
+    onPopoverChange(match ? popoverAtPointer(event, {
+      title: match.item.label,
+      color: colors[match.index % colors.length],
+      label: `${formatWorkCount(match.item.count)} publications`,
+      value: `${Math.round(match.item.count / total * 100)}%`,
+    }) : null)
   }
-
-  const centerShare = activeSegment && total
-    ? `${Math.round(activeSegment.item.count / total * 100)}%`
-    : centerLabel
 
   return <Box
     className={className}
     onMouseMove={handleMouseMove}
-    onMouseLeave={() => onHoveredIndexChange(null)}
+    onMouseLeave={() => {
+      onHoveredIndexChange(null)
+      onPopoverChange(null)
+    }}
     role="group"
     aria-label={`${formatWorkCount(total)} publications across ${segments.length} categories`}
   >
     <svg className="donut-svg" viewBox="0 0 100 100">
       {renderSegments.map((segment) => {
         const isActive = segment.index === hoveredIndex
-        const midpoint = (segment.start + segment.end) * 1.8
-        const translateDistance = isActive ? 3.5 : 0
-        const radians = (midpoint - 90) * Math.PI / 180
+        const details = {
+          title: segment.item.label,
+          color: colors[segment.index % colors.length],
+          label: `${formatWorkCount(segment.item.count)} publications`,
+          value: `${Math.round(segment.item.count / total * 100)}%`,
+        }
         return <path
           key={segment.item.label}
           className={`donut-segment${isActive ? ' is-active' : ''}`}
           d={donutSegmentPath(segment.start, segment.end)}
           fill={colors[segment.index % colors.length]}
-          transform={`translate(${Math.cos(radians) * translateDistance} ${Math.sin(radians) * translateDistance})`}
           tabIndex={0}
           role="img"
           aria-label={`${segment.item.label}: ${formatWorkCount(segment.item.count)} publications, ${Math.round(segment.item.count / total * 100)}%`}
-          onFocus={() => onHoveredIndexChange(segment.index)}
-          onBlur={() => onHoveredIndexChange(null)}
+          onFocus={(event) => {
+            onHoveredIndexChange(segment.index)
+            onPopoverChange(popoverAtFocus(event, details))
+          }}
+          onBlur={() => {
+            onHoveredIndexChange(null)
+            onPopoverChange(null)
+          }}
         />
       })}
     </svg>
-    <Box
-      className="donut-hole"
-      aria-hidden="true"
-    >
-      {activeSegment
-        ? <>
-          <span className="donut-center-share">{centerShare}</span>
-          <span className="donut-center-count">{formatWorkCount(activeSegment.item.count)}</span>
-        </>
-        : centerLabel && <span>{centerLabel}</span>}
-    </Box>
+    {centerLabel && <Box className="donut-hole" aria-hidden="true">{centerLabel}</Box>}
   </Box>
 }
 
-function Legend({ items, colors, hoveredIndex, onHoveredIndexChange }: {
+function Legend({ items, colors, hoveredIndex, onHoveredIndexChange, onPopoverChange }: {
   items: DistributionItem[]
   colors: string[]
   hoveredIndex: number | null
   onHoveredIndexChange: (index: number | null) => void
+  onPopoverChange: (data: ChartPopoverData | null) => void
 }) {
   const total = items.reduce((sum, item) => sum + item.count, 0)
 
@@ -487,16 +552,35 @@ function Legend({ items, colors, hoveredIndex, onHoveredIndexChange }: {
     {items.map((item, index) => {
       const share = total ? Math.round(item.count / total * 100) : 0
       const isActive = hoveredIndex === index
+      const details = {
+        title: item.label,
+        color: colors[index % colors.length],
+        label: `${formatWorkCount(item.count)} publications`,
+        value: `${share}%`,
+      }
       return <Box
         className={`distribution-legend-row${isActive ? ' is-highlighted' : ''}`}
         key={item.label}
         tabIndex={0}
         role="img"
         aria-label={`${item.label}: ${formatWorkCount(item.count)} publications (${share}%)`}
-        onMouseEnter={() => onHoveredIndexChange(index)}
-        onMouseLeave={() => onHoveredIndexChange(null)}
-        onFocus={() => onHoveredIndexChange(index)}
-        onBlur={() => onHoveredIndexChange(null)}
+        onMouseEnter={(event) => {
+          onHoveredIndexChange(index)
+          onPopoverChange(popoverAtPointer(event, details))
+        }}
+        onMouseMove={(event) => onPopoverChange(popoverAtPointer(event, details))}
+        onMouseLeave={() => {
+          onHoveredIndexChange(null)
+          onPopoverChange(null)
+        }}
+        onFocus={(event) => {
+          onHoveredIndexChange(index)
+          onPopoverChange(popoverAtFocus(event, details))
+        }}
+        onBlur={() => {
+          onHoveredIndexChange(null)
+          onPopoverChange(null)
+        }}
       >
         <span className="distribution-legend-dot" style={{ background: colors[index % colors.length] }} />
         <Typography>{item.label}</Typography>
@@ -508,18 +592,26 @@ function Legend({ items, colors, hoveredIndex, onHoveredIndexChange }: {
 
 function SubjectAreaChart({ items }: { items: DistributionItem[] }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
-  return <Box className="subject-area-chart">
-    <Legend items={items} colors={subjectChartColors} hoveredIndex={hoveredIndex} onHoveredIndexChange={setHoveredIndex} />
-    <Donut items={items} colors={subjectChartColors} className="subject-donut" centerLabel="100%" hoveredIndex={hoveredIndex} onHoveredIndexChange={setHoveredIndex} />
-  </Box>
+  const [popover, setPopover] = useState<ChartPopoverData | null>(null)
+  return <>
+    <Box className="subject-area-chart">
+      <Legend items={items} colors={subjectChartColors} hoveredIndex={hoveredIndex} onHoveredIndexChange={setHoveredIndex} onPopoverChange={setPopover} />
+      <Donut items={items} colors={subjectChartColors} className="subject-donut" centerLabel="100%" hoveredIndex={hoveredIndex} onHoveredIndexChange={setHoveredIndex} onPopoverChange={setPopover} />
+    </Box>
+    <ChartHoverPopover data={popover} />
+  </>
 }
 
 function PublicationTypeChart({ items }: { items: DistributionItem[] }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
-  return <Box className="publication-type-chart">
-    <Legend items={items} colors={publicationTypeColors} hoveredIndex={hoveredIndex} onHoveredIndexChange={setHoveredIndex} />
-    <Donut items={items} colors={publicationTypeColors} className="publication-type-donut" hoveredIndex={hoveredIndex} onHoveredIndexChange={setHoveredIndex} />
-  </Box>
+  const [popover, setPopover] = useState<ChartPopoverData | null>(null)
+  return <>
+    <Box className="publication-type-chart">
+      <Legend items={items} colors={publicationTypeColors} hoveredIndex={hoveredIndex} onHoveredIndexChange={setHoveredIndex} onPopoverChange={setPopover} />
+      <Donut items={items} colors={publicationTypeColors} className="publication-type-donut" hoveredIndex={hoveredIndex} onHoveredIndexChange={setHoveredIndex} onPopoverChange={setPopover} />
+    </Box>
+    <ChartHoverPopover data={popover} />
+  </>
 }
 
 function EmptyState({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
