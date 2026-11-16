@@ -9,7 +9,6 @@ type InFlightRequest = {
 const memoryCache = new Map<string, unknown>()
 const inFlightRequests = new Map<string, InFlightRequest>()
 let cacheGeneration = 0
-const FIRESTORE_CACHE_TIMEOUT_MS = 2_500
 
 export function clearProjectResearchCache() {
   cacheGeneration += 1
@@ -43,16 +42,10 @@ export async function getProjectResearchData<T>(
     nextRequest.promise = (async () => {
       const cacheDocumentId = await hashCacheKey(cacheKey)
       const cacheDocument = doc(db, 'users', userId, 'projects', projectId, 'researchCache', cacheDocumentId)
-      let snapshot
-      try {
-        snapshot = await withTimeout(getDoc(cacheDocument), FIRESTORE_CACHE_TIMEOUT_MS, 'Firestore cache read')
-      } catch (error) {
-        if (controller.signal.aborted || requestGeneration !== cacheGeneration) throw createAbortError()
-        console.warn('Could not read project research cache; loading fresh data instead.', error)
-      }
+      const snapshot = await getDoc(cacheDocument)
       if (controller.signal.aborted || requestGeneration !== cacheGeneration) throw createAbortError()
 
-      if (snapshot?.exists()) {
+      if (snapshot.exists()) {
         const cached = snapshot.data()
         if (cached.version === 1 && (Array.isArray(cached.payload) || isRecord(cached.payload))) {
           memoryCache.set(scopedCacheKey, cached.payload)
@@ -64,16 +57,11 @@ export async function getProjectResearchData<T>(
       if (controller.signal.aborted || requestGeneration !== cacheGeneration) throw createAbortError()
       const persistedPayload = JSON.parse(JSON.stringify(payload)) as T
 
-      try {
-        await withTimeout(setDoc(cacheDocument, {
-          version: 1,
-          payload: persistedPayload,
-          updatedAt: serverTimestamp(),
-        }), FIRESTORE_CACHE_TIMEOUT_MS, 'Firestore cache write')
-      } catch (error) {
-        if (controller.signal.aborted || requestGeneration !== cacheGeneration) throw createAbortError()
-        console.warn('Could not save project research cache; using the loaded data for this session.', error)
-      }
+      await setDoc(cacheDocument, {
+        version: 1,
+        payload: persistedPayload,
+        updatedAt: serverTimestamp(),
+      })
 
       if (controller.signal.aborted || requestGeneration !== cacheGeneration || auth.currentUser?.uid !== userId) {
         throw createAbortError()
@@ -117,18 +105,6 @@ function waitForCaller<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T>
 
 function createAbortError() {
   return new DOMException('The operation was aborted.', 'AbortError')
-}
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
-  let timeoutId: number | undefined
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => {
-      timeoutId = window.setTimeout(() => reject(new Error(`${operation} timed out after ${timeoutMs / 1000} seconds.`)), timeoutMs)
-    }),
-  ]).finally(() => {
-    if (timeoutId !== undefined) window.clearTimeout(timeoutId)
-  })
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
