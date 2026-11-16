@@ -4,7 +4,6 @@ import {
   ButtonBase,
   IconButton,
   InputBase,
-  Skeleton,
   Typography,
 } from '@mui/material'
 import {
@@ -16,32 +15,15 @@ import {
   Squares2X2Icon,
 } from '@heroicons/react/24/outline'
 import type { AppPage } from '../App'
-import type { LocalProject, ProjectTab } from '../types/project'
 
 type SidebarProps = {
   activePage: AppPage
-  activeProject: LocalProject | null
-  projects: LocalProject[]
-  projectsLoading: boolean
-  projectTab: ProjectTab
   onNavigate: (page: AppPage) => void
-  onProjectOpen: (project: LocalProject, tab: ProjectTab) => void
 }
 
-const projectSections: { label: string; value: ProjectTab }[] = [
-  { label: 'Overview', value: 'overview' },
-  { label: 'News Feed', value: 'news-feed' },
-  { label: 'Keywords & Monitoring', value: 'keywords-monitoring' },
-  { label: 'Members', value: 'members' },
-]
-
-export function Sidebar({ activePage, activeProject, projects, projectsLoading, projectTab, onNavigate, onProjectOpen }: SidebarProps) {
-  const [projectOpen, setProjectOpen] = useState(() => activePage === 'all-projects')
-  const projectPageActive = activePage === 'project-detail'
-  const projectGroupActive = activePage === 'all-projects' || activePage === 'create-project' || projectPageActive
-  const closeProjectMenuOnMobile = () => {
-    if (window.matchMedia('(max-width: 620px)').matches) setProjectOpen(false)
-  }
+export function Sidebar({ activePage, onNavigate }: SidebarProps) {
+  const [projectOpen, setProjectOpen] = useState(false)
+  const projectGroupActive = activePage === 'all-projects' || activePage === 'create-project' || activePage === 'project-detail'
 
   return (
     <Box component="aside" className="sidebar">
@@ -110,36 +92,6 @@ export function Sidebar({ activePage, activeProject, projects, projectsLoading, 
               Create Project
             </ButtonBase>
 
-            {projectsLoading
-              ? <Box className="project-navigation-skeleton" role="status" aria-label="Loading projects">
-                {[0, 1, 2].map((item) => <Skeleton key={item} variant="text" width={`${68 + item * 8}%`} height={30} aria-hidden="true" />)}
-              </Box>
-              : projects.map((project) => <Box key={project.id}>
-              <ButtonBase
-                className={`nested-nav-link nested-nav-project${activeProject?.id === project.id && projectPageActive ? ' is-active' : ''}`}
-                onClick={() => {
-                  onProjectOpen(project, 'overview')
-                  closeProjectMenuOnMobile()
-                }}
-                aria-current={activeProject?.id === project.id && projectPageActive && projectTab === 'overview' ? 'page' : undefined}
-                title={project.name}
-              >
-                <span>{project.name}</span>
-              </ButtonBase>
-              {activeProject?.id === project.id && projectPageActive && <Box className="project-detail-nav" aria-label={`${project.name} sections`}>
-                {projectSections.map((section) => <ButtonBase
-                  key={section.value}
-                  className={`project-detail-link${projectTab === section.value ? ' is-active' : ''}`}
-                  onClick={() => {
-                    onProjectOpen(project, section.value)
-                    closeProjectMenuOnMobile()
-                  }}
-                  aria-current={projectTab === section.value ? 'page' : undefined}
-                >
-                  {section.label}
-                </ButtonBase>)}
-              </Box>}
-              </Box>)}
           </Box>}
         </Box>
       </Box>

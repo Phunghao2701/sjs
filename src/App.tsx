@@ -291,13 +291,8 @@ function ResearchPulseApp() {
       <CssBaseline />
       <AppShell
         activePage={activePage}
-        activeProject={activeProject}
-        projects={projects}
-        projectsLoading={projectsLoading}
-        projectTab={projectTab}
         accountEmail={auth.currentUser?.email ?? 'user@example.com'}
         onNavigate={handleNavigate}
-        onProjectOpen={handleProjectOpen}
         onLogout={() => { void handleLogout() }}
       >
         <PageTransition key={`${activePage}-${activeProject?.id ?? ''}`}>

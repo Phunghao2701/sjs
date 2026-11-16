@@ -2,34 +2,23 @@ import type { ReactNode } from 'react'
 import { Box, IconButton, InputBase, Tooltip } from '@mui/material'
 import { BellIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import type { AppPage } from '../App'
-import type { LocalProject, ProjectTab } from '../types/project'
 import { Sidebar } from './Sidebar'
 import { AccountMenu } from './AccountMenu'
 
 type AppShellProps = {
   activePage: AppPage
-  activeProject: LocalProject | null
-  projects: LocalProject[]
-  projectsLoading: boolean
-  projectTab: ProjectTab
   accountEmail: string
   onNavigate: (page: AppPage) => void
-  onProjectOpen: (project: LocalProject, tab: ProjectTab) => void
   onLogout: () => void
   children: ReactNode
 }
 
-export function AppShell({ activePage, activeProject, projects, projectsLoading, projectTab, accountEmail, onNavigate, onProjectOpen, onLogout, children }: AppShellProps) {
+export function AppShell({ activePage, accountEmail, onNavigate, onLogout, children }: AppShellProps) {
   return (
     <Box className="app-shell">
       <Sidebar
         activePage={activePage}
-        activeProject={activeProject}
-        projects={projects}
-        projectsLoading={projectsLoading}
-        projectTab={projectTab}
         onNavigate={onNavigate}
-        onProjectOpen={onProjectOpen}
       />
       <Box component="main" className="main-shell">
         <Box component="header" className="topbar">
