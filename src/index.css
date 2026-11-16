@@ -218,7 +218,7 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 .account-menu-item .account-menu-chevron { width: 16px; height: 16px; flex-basis: 16px; margin-left: auto; color: #98a2b3; }
 .account-menu-logout { height: 40px; flex-basis: 40px; }
 .topbar-divider { height: 1px; flex: 0 0 1px; background: var(--stroke-soft); }
-.page-stage { min-height: 0; flex: 1; overflow: hidden; background: var(--app-bg); }
+.page-stage { min-height: 0; flex: 1; overflow-x: hidden; overflow-y: auto; background: var(--app-bg); }
 
 @media (max-width: 1100px) {
   .app-shell { grid-template-columns: 220px minmax(0, 1fr); }
@@ -264,17 +264,16 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 
-.page-motion { width: 100%; height: 100%; min-height: 0; }
+.page-motion { width: 100%; min-height: 100%; }
 
 /* Overview search */
 .overview-page {
   display: flex;
   width: 100%;
-  height: 100%;
-  min-height: 0;
+  min-height: 100%;
   flex-direction: column;
   gap: 19px;
-  overflow: hidden;
+  overflow: visible;
   padding: 36px;
   background: var(--app-bg);
 }
