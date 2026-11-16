@@ -66,37 +66,53 @@ function ResearchPulseApp() {
     if (!firebaseConfigured) return
 
     let mounted = true
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!mounted) return
-      setUserId(user?.uid ?? null)
-      setAuthError('')
+    let unsubscribe: (() => void) | null = null
 
-      if (user) {
-        setAuthStatus('ready')
+    const subscribeToAuthChanges = () => {
+      unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (!mounted) return
+        setUserId(user?.uid ?? null)
+        setAuthError('')
+
+        if (user) {
+          setAuthStatus('ready')
+          void loadProjects()
+          return
+        }
+
         void loadProjects()
-        return
-      }
+        if (firebaseEmulatorsEnabled) {
+          setAuthStatus('loading')
+          void ensureDevelopmentEmulatorUser().catch((error: unknown) => {
+            if (!mounted) return
+            setAuthStatus('error')
+            setAuthError(error instanceof Error ? error.message : 'Could not sign in to the Firebase Auth Emulator.')
+          })
+        } else {
+          setAuthStatus('ready')
+        }
+      }, (error) => {
+        if (!mounted) return
+        setAuthStatus('error')
+        setAuthError(error.message || 'Could not read Firebase authentication state.')
+      })
+    }
 
-      void loadProjects()
-      if (firebaseEmulatorsEnabled) {
-        setAuthStatus('loading')
-        void ensureDevelopmentEmulatorUser().catch((error: unknown) => {
-          if (!mounted) return
-          setAuthStatus('error')
-          setAuthError(error instanceof Error ? error.message : 'Could not sign in to the Firebase Auth Emulator.')
-        })
-      } else {
-        setAuthStatus('ready')
-      }
-    }, (error) => {
-      if (!mounted) return
-      setAuthStatus('error')
-      setAuthError(error.message || 'Could not read Firebase authentication state.')
-    })
+    if (firebaseEmulatorsEnabled) {
+      void ensureDevelopmentEmulatorUser().then(() => {
+        if (mounted) subscribeToAuthChanges()
+      }).catch((error: unknown) => {
+        if (!mounted) return
+        setAuthStatus('error')
+        setAuthError(error instanceof Error ? error.message : 'Could not sign in to the Firebase Auth Emulator.')
+      })
+    } else {
+      subscribeToAuthChanges()
+    }
 
     return () => {
       mounted = false
-      unsubscribe()
+      unsubscribe?.()
     }
   }, [loadProjects])
 
