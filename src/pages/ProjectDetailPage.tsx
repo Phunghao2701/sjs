@@ -95,7 +95,7 @@ export function ProjectDetailPage({ project, activeTab, onTabChange, onProjectTo
   const [overviewRequestVersion, setOverviewRequestVersion] = useState(0)
   const [overviewRequest, setOverviewRequest] = useState<ProjectOverviewRequest | null>(null)
   const projectSearch = useMemo(() => buildProjectSearch(trackedTopics, project.subject), [project.subject, trackedTopics])
-  const overviewRequestKey = JSON.stringify([project.id, projectSearch.query, overviewRequestVersion])
+  const overviewRequestKey = JSON.stringify([project.id, projectSearch.query, publicationTrendYears, overviewRequestVersion])
   const activeOverviewRequest = overviewRequest?.key === overviewRequestKey ? overviewRequest : null
   const overviewData = activeOverviewRequest?.status === 'success' ? activeOverviewRequest.data : null
   const overviewError = activeOverviewRequest?.status === 'error' ? activeOverviewRequest.message : ''
@@ -105,8 +105,8 @@ export function ProjectDetailPage({ project, activeTab, onTabChange, onProjectTo
     const controller = new AbortController()
     getProjectResearchData(
       project.id,
-      JSON.stringify(['overview', projectSearch.query]),
-      (signal) => getProjectOverview(projectSearch.query, signal),
+      JSON.stringify(['overview', projectSearch.query, publicationTrendYears]),
+      (signal) => getProjectOverview(projectSearch.query, publicationTrendYears, signal),
       controller.signal,
     )
       .then((result) => {
@@ -127,7 +127,7 @@ export function ProjectDetailPage({ project, activeTab, onTabChange, onProjectTo
       })
 
     return () => controller.abort()
-  }, [overviewRequestKey, project.id, projectSearch.query])
+  }, [overviewRequestKey, project.id, projectSearch.query, publicationTrendYears])
 
   useEffect(() => {
     const tabs = projectTabsRef.current
@@ -280,7 +280,7 @@ function OverviewContent({
           : error
             ? <OverviewErrorState message={error} onRetry={onRetry} />
             : data?.years.length
-              ? <PublicationTrendChart years={data.years.slice(-publicationTrendYears)} />
+              ? <PublicationTrendChart years={data.years} />
               : <EmptyState icon={<ChartBarIcon width={28} height={28} />} title="Waiting for publication data" description="Related publication trends will appear here." />}
       </Paper>
       <Paper variant="outlined" className="project-chart-card subject-distribution-card">

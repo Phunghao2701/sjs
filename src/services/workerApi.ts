@@ -224,11 +224,11 @@ export async function searchResearch(entity: ResearchEntity, params: ResearchSea
   }
 }
 
-export async function getProjectOverview(query: string, signal?: AbortSignal) {
+export async function getProjectOverview(query: string, years: number, signal?: AbortSignal) {
   try {
     const response = await getJson<WorkerEnvelope<WorkerProjectOverview>>(
       '/api/v1/projects/overview',
-      { query },
+      { query, years },
       signal,
     )
     return unwrap(response)
