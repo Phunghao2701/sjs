@@ -218,6 +218,9 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 .account-menu-item { display: flex; height: 58px; flex: 0 0 58px; align-items: center; gap: 12px; padding: 0 8px; color: #20252e; font-size: 14px; font-weight: 400; line-height: 20px; }
 .account-menu-item > svg { width: 18px; height: 18px; flex: 0 0 18px; color: #667085; stroke-width: 1.6; }
 .account-menu-item .account-menu-chevron { width: 16px; height: 16px; flex-basis: 16px; margin-left: auto; color: #98a2b3; }
+.account-menu-profile-row { margin: 0; padding: 0; }
+.account-menu-profile.MuiButtonBase-root { width: 100%; justify-content: flex-start; text-align: left; }
+.account-menu-profile.MuiButtonBase-root:hover { background: transparent; }
 .account-menu-logout { height: 40px; flex-basis: 40px; }
 .topbar-divider { height: 1px; flex: 0 0 1px; background: var(--stroke-soft); }
 .page-stage { min-height: 0; flex: 1; overflow-x: hidden; overflow-y: auto; background: var(--app-bg); }
@@ -264,6 +267,76 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+/* Profile */
+.topbar.is-profile-topbar { justify-content: space-between; }
+.profile-topbar-breadcrumb { display: flex; min-width: 0; align-items: center; gap: 10px; color: #667080; font-size: 13px; line-height: 20px; }
+.profile-topbar-breadcrumb strong { color: #1f2938; font-weight: 600; }
+.profile-page { display: flex; width: 100%; min-height: 100%; flex-direction: column; gap: 26px; padding: 32px 36px 48px; background: var(--app-bg); }
+.profile-page-intro, .profile-section { width: min(100%, 1040px); }
+.profile-page-intro { padding-bottom: 18px; border-bottom: 1px solid #e2e6ea; }
+.profile-page-intro h1 { margin: 0 0 5px; color: #1f2938; font-size: 24px; font-weight: 600; letter-spacing: -.02em; line-height: 32px; }
+.profile-page-intro p { margin: 0; color: #667080; font-size: 13px; line-height: 20px; }
+.profile-section { display: flex; flex-direction: column; gap: 12px; }
+.profile-section-heading { display: flex; align-items: center; gap: 9px; }
+.profile-section-heading > svg { width: 18px; height: 18px; color: #667080; stroke-width: 1.7; }
+.profile-section-heading h2 { margin: 0; color: #1f2938; font-size: 15px; font-weight: 600; line-height: 22px; }
+.profile-card.MuiPaper-root { overflow: hidden; border-color: #d1d6de; border-radius: 10px; background: #fff; box-shadow: none; }
+.profile-personal-card.MuiPaper-root { padding: 16px; }
+.profile-identity { display: flex; min-height: 52px; align-items: center; gap: 12px; }
+.profile-identity-icon { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border: 1px solid #e2e6ea; border-radius: 8px; color: #667080; background: #f8f9fa; }
+.profile-identity-icon svg { width: 19px; height: 19px; stroke-width: 1.6; }
+.profile-identity-copy { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.profile-identity-copy p { overflow: hidden; color: #1f2938; font-size: 14px; font-weight: 500; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.profile-identity-copy span, .profile-setting-copy span { color: #667080; font-size: 12px; line-height: 18px; }
+.profile-card-divider { height: 1px; margin: 14px 0 4px; background: #e2e6ea; }
+.profile-fields { display: flex; flex-direction: column; }
+.profile-field-row { display: grid; grid-template-columns: 180px minmax(0, 1fr); align-items: center; gap: 16px; min-height: 68px; padding: 10px 0; }
+.profile-field-row + .profile-field-row { border-top: 1px solid #eef0f2; }
+.profile-field-row > label, .profile-field-row > span, .profile-setting-row > label { color: #344054; font-size: 13px; font-weight: 500; line-height: 20px; }
+.profile-field-control { display: flex; min-width: 0; align-items: center; gap: 10px; }
+.profile-field-control .MuiTextField-root { min-width: 0; flex: 1; }
+.profile-field-control .MuiOutlinedInput-root, .profile-preferences-card .MuiOutlinedInput-root { border-radius: 7px; background: #fff; }
+.profile-field-control .MuiOutlinedInput-input { padding: 9px 11px; font-size: 13px; }
+.profile-field-control .MuiButton-root, .profile-security-card .MuiButton-root { min-width: 86px; min-height: 36px; border-color: #d1d6de; border-radius: 7px; color: #344054; font-size: 12px; font-weight: 500; text-transform: none; }
+.profile-field-control .MuiButton-root:hover, .profile-security-card .MuiButton-root:hover { border-color: #d1d6de; background: #f5f5f5; }
+.profile-email-control { justify-content: space-between; }
+.profile-email-value { display: flex; min-width: 0; align-items: center; gap: 10px; }
+.profile-email-value > span { overflow: hidden; color: #1f2938; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.profile-verified-badge { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; padding: 3px 7px; border-radius: 5px; color: #027a48; background: #ecfdf3; font-size: 11px; font-weight: 500; line-height: 16px; }
+.profile-verified-badge svg { width: 13px; height: 13px; }
+.profile-verified-badge.is-unverified { color: #667080; background: #f2f4f7; }
+.profile-inline-alert.MuiAlert-root { margin-top: 10px; border-radius: 7px; font-size: 12px; }
+.profile-security-card.MuiPaper-root { display: flex; min-height: 80px; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; }
+.profile-setting-copy { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
+.profile-setting-copy p { color: #1f2938; font-size: 13px; font-weight: 500; line-height: 19px; }
+.profile-preferences-card.MuiPaper-root { padding: 4px 16px; }
+.profile-setting-row { display: grid; grid-template-columns: 180px minmax(0, 1fr); align-items: center; gap: 16px; min-height: 58px; padding: 9px 0; }
+.profile-setting-row + .profile-setting-row { border-top: 1px solid #eef0f2; }
+.profile-setting-row .MuiInputBase-root { width: min(100%, 360px); font-size: 13px; }
+.profile-setting-row .MuiSelect-select { padding: 8px 11px; }
+.profile-preference-message { padding: 4px 0 8px; color: #667080; font-size: 11px !important; }
+
+@media (max-width: 860px) {
+  .profile-page { gap: 22px; padding: 26px 24px 40px; }
+  .profile-page-intro, .profile-section { width: 100%; }
+}
+
+@media (max-width: 620px) {
+  .topbar.is-profile-topbar { padding-inline: 10px; }
+  .profile-topbar-breadcrumb { gap: 7px; font-size: 12px; }
+  .profile-page { gap: 20px; padding: 22px 14px 32px; }
+  .profile-page-intro h1 { font-size: 21px; line-height: 28px; }
+  .profile-page-intro { padding-bottom: 14px; }
+  .profile-personal-card.MuiPaper-root { padding: 12px; }
+  .profile-field-row, .profile-setting-row { grid-template-columns: minmax(0, 1fr); gap: 7px; padding: 12px 0; }
+  .profile-field-control { align-items: stretch; }
+  .profile-field-control .MuiButton-root { min-width: 72px; }
+  .profile-email-value { flex-wrap: wrap; gap: 6px; }
+  .profile-email-control { align-items: flex-start; }
+  .profile-security-card.MuiPaper-root { min-height: 74px; padding: 12px; }
+  .profile-setting-row .MuiInputBase-root { width: 100%; }
 }
 
 .page-motion { width: 100%; min-height: 100%; }

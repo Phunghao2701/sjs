@@ -9,7 +9,7 @@ import {
   UserIcon,
 } from '@heroicons/react/24/outline'
 
-export function AccountMenu({ email, onLogout }: { email: string; onLogout: () => void }) {
+export function AccountMenu({ email, onProfileClick, onLogout }: { email: string; onProfileClick: () => void; onLogout: () => void }) {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
   const open = Boolean(anchorEl)
 
@@ -51,9 +51,20 @@ export function AccountMenu({ email, onLogout }: { email: string; onLogout: () =
           <Box className="account-menu-divider" />
           <Box className="account-menu-spacer" aria-hidden="true" />
           <Box component="ul" className="account-menu-list" aria-label="Account options">
-            <li className="account-menu-item">
-              <UserIcon aria-hidden="true" />
-              <span>Profile</span>
+            <li className="account-menu-profile-row">
+              <ButtonBase
+                component="button"
+                type="button"
+                disableRipple
+                className="account-menu-item account-menu-profile"
+                onClick={() => {
+                  setAnchorEl(null)
+                  onProfileClick()
+                }}
+              >
+                <UserIcon aria-hidden="true" />
+                <span>Profile</span>
+              </ButtonBase>
             </li>
             <li className="account-menu-item">
               <ComputerDesktopIcon aria-hidden="true" />

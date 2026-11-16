@@ -10,6 +10,7 @@ import { AllProjectsPage } from './pages/AllProjectsPage'
 import { OverviewPage } from './pages/OverviewPage'
 import { LoginPage, type SsoLoginStatus } from './pages/LoginPage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
+import { ProfilePage } from './pages/ProfilePage'
 import type { LocalProject, ProjectTab } from './types/project'
 import { auth, ensureDevelopmentEmulatorUser, firebaseConfigured, firebaseEmulatorsEnabled } from './services/firebase'
 import { clearProjectResearchCache } from './services/projectResearchCache'
@@ -18,7 +19,7 @@ import { createProjectInFirestore, listMyProjects, type NewProject } from './ser
 import { completeSsoLogin, getSsoConfigurationError, hasSsoCallbackParameters, startSsoLogin } from './services/ssoLogin'
 import { researchPulseTheme } from './theme'
 
-export type AppPage = 'overview' | 'all-projects' | 'create-project' | 'project-detail'
+export type AppPage = 'overview' | 'all-projects' | 'create-project' | 'project-detail' | 'profile'
 
 type AppRoute = {
   page: AppPage
@@ -33,6 +34,7 @@ function readAppRoute(): AppRoute {
   const page = params.get('page')
   if (page === 'all-projects') return { page, projectId: null, tab: 'overview' }
   if (page === 'create-project') return { page, projectId: null, tab: 'overview' }
+  if (page === 'profile') return { page, projectId: null, tab: 'overview' }
 
   const projectId = params.get('projectId')
   if (page === 'project-detail' && projectId) {
@@ -55,6 +57,8 @@ function writeAppRoute(route: AppRoute, replace = false) {
     url.searchParams.set('page', 'all-projects')
   } else if (route.page === 'create-project') {
     url.searchParams.set('page', 'create-project')
+  } else if (route.page === 'profile') {
+    url.searchParams.set('page', 'profile')
   } else if (route.page === 'project-detail' && route.projectId) {
     url.searchParams.set('page', 'project-detail')
     url.searchParams.set('projectId', route.projectId)
@@ -228,6 +232,8 @@ function ResearchPulseApp() {
     navigate({ page, projectId: null, tab: 'overview' })
   }
 
+  const handleProfileOpen = () => navigate({ page: 'profile', projectId: null, tab: 'overview' })
+
   const handleProjectTabChange = (tab: ProjectTab) => {
     if (activeProject) navigate({ page: 'project-detail', projectId: activeProject.id, tab })
   }
@@ -296,6 +302,7 @@ function ResearchPulseApp() {
         projectsLoading={projectsLoading}
         projectTab={projectTab}
         accountEmail={auth.currentUser?.email ?? 'user@example.com'}
+        onProfileClick={handleProfileOpen}
         onNavigate={handleNavigate}
         onProjectOpen={handleProjectOpen}
         onLogout={() => { void handleLogout() }}
@@ -303,6 +310,13 @@ function ResearchPulseApp() {
         <PageTransition key={`${activePage}-${activeProject?.id ?? ''}`}>
           {activePage === 'overview'
             ? <OverviewPage />
+            : activePage === 'profile'
+              ? <ProfilePage
+                displayName={auth.currentUser?.displayName ?? ''}
+                email={auth.currentUser?.email ?? ''}
+                emailVerified={auth.currentUser?.emailVerified ?? false}
+                userId={auth.currentUser?.uid ?? ''}
+              />
             : activePage === 'all-projects'
               ? <AllProjectsPage
                 projects={projects}
