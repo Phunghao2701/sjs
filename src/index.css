@@ -763,10 +763,6 @@ a:focus-visible { text-decoration: underline; text-decoration-color: var(--muted
 .keyword-result-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .keyword-result-header p { overflow: hidden; color: #252a2f; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .keyword-result-status { color: #858c95; font-size: 10px !important; }
-.keyword-result-publications { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
-.keyword-result-publication { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 10px; }
-.keyword-result-publication p { overflow: hidden; min-width: 0; color: #343a40; font-size: 10px; line-height: 14px; text-overflow: ellipsis; white-space: nowrap; }
-.keyword-result-publication span { flex: 0 0 auto; color: #858c95; font-size: 10px; line-height: 14px; }
 .keyword-result-error { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; }
 .keyword-result-error .keyword-result-status { min-width: 0; overflow-wrap: anywhere; }
 .keyword-result-error .MuiButton-root { min-height: 28px; flex: 0 0 auto; font-size: 10px; }

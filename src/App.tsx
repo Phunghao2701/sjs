@@ -10,6 +10,7 @@ import { LoginPage, type SsoLoginStatus } from './pages/LoginPage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import type { LocalProject, ProjectTab } from './types/project'
 import { auth, ensureDevelopmentEmulatorUser, firebaseConfigured, firebaseEmulatorsEnabled } from './services/firebase'
+import { clearKeywordMonitoringCache } from './services/keywordMonitoring'
 import { createProjectInFirestore, listMyProjects, type NewProject } from './services/projectStore'
 import { completeSsoLogin, getSsoConfigurationError, hasSsoCallbackParameters, startSsoLogin } from './services/ssoLogin'
 import { researchPulseTheme } from './theme'
@@ -147,6 +148,7 @@ function ResearchPulseApp() {
           return
         }
 
+        clearKeywordMonitoringCache()
         void loadProjects()
         if (developmentAutoLoginEnabled && !skipDevelopmentAutoSignIn.current) {
           setAuthStatus('loading')

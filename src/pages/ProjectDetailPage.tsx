@@ -8,6 +8,7 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 import type { LocalProject, ProjectTab } from '../types/project'
+import { getKeywordMonitoringResult, type KeywordMonitoringResult } from '../services/keywordMonitoring'
 import { getProjectOverview, searchResearch, type ApiPagination, type WorkerProjectOverview, type WorkerWork } from '../services/workerApi'
 
 const projectTabs: { label: string; value: ProjectTab }[] = [
@@ -44,31 +45,9 @@ type NewsFeedRequest =
   | { key: string; status: 'success'; works: WorkerWork[]; total: number; pagination?: ApiPagination }
   | { key: string; status: 'error'; message: string }
 
-type KeywordMonitoringResult = { total: number; works: WorkerWork[] }
 type KeywordMonitoringRequest =
   | { status: 'success'; data: KeywordMonitoringResult }
   | { status: 'error'; message: string }
-
-const keywordMonitoringCache = new Map<string, { expiresAt: number; data: KeywordMonitoringResult }>()
-const keywordMonitoringCacheTtlMs = 120_000
-
-async function getKeywordMonitoringResult(query: string, signal: AbortSignal): Promise<KeywordMonitoringResult> {
-  const cacheKey = query.trim().toLocaleLowerCase()
-  const cached = keywordMonitoringCache.get(cacheKey)
-  if (cached && cached.expiresAt > Date.now()) return cached.data
-
-  const response = await searchResearch('Works', {
-    query,
-    page: 1,
-    limit: 3,
-    sortBy: 'publication_year',
-    sortOrder: 'desc',
-    include_facets: 0,
-  }, signal)
-  const data = { total: response.total, works: response.items as WorkerWork[] }
-  if (!signal.aborted) keywordMonitoringCache.set(cacheKey, { data, expiresAt: Date.now() + keywordMonitoringCacheTtlMs })
-  return data
-}
 
 function buildProjectSearch(topics: string[], subject: string) {
   const terms = topics.map((topic) => topic.replace(/["\\]/g, '').replace(/\s+/g, ' ').trim()).filter(Boolean)
@@ -858,16 +837,7 @@ function KeywordContent({
                 <Typography className="keyword-result-status">{result.message}</Typography>
                 <Button size="small" variant="outlined" onClick={() => setRetryVersion((version) => version + 1)}>Retry</Button>
               </Box>
-                : result.data.total === 0 ? <Typography className="keyword-result-status">No OpenAlex publications match this keyword.</Typography>
-                  : <>
-                    <Typography className="keyword-result-status">Recent matching publications</Typography>
-                    <Box className="keyword-result-publications">
-                      {result.data.works.map((work) => <Box className="keyword-result-publication" key={work.id}>
-                        <Typography title={work.title}>{work.title || 'Untitled publication'}</Typography>
-                        <span>{work.publication_year ?? '—'}</span>
-                      </Box>)}
-                    </Box>
-                  </>}
+                : <Typography className="keyword-result-status">Matched publications</Typography>}
           </Paper>
           }) : <Box className="project-list-empty">Add a keyword to start monitoring publications.</Box>}
         </Box>
