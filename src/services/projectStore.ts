@@ -6,6 +6,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
 import type { LocalProject } from '../types/project'
@@ -45,4 +46,11 @@ export async function createProjectInFirestore(project: NewProject): Promise<Loc
     updatedAt: serverTimestamp(),
   })
   return { ...project, id: reference.id }
+}
+
+export async function updateProjectTopicsInFirestore(projectId: string, topics: string[]) {
+  await updateDoc(doc(projectsCollection(), projectId), {
+    keywords: topics,
+    updatedAt: serverTimestamp(),
+  })
 }

@@ -10,7 +10,7 @@ import { LoginPage, type SsoLoginStatus } from './pages/LoginPage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import type { LocalProject, ProjectTab } from './types/project'
 import { auth, ensureDevelopmentEmulatorUser, firebaseConfigured, firebaseEmulatorsEnabled } from './services/firebase'
-import { clearKeywordMonitoringCache } from './services/keywordMonitoring'
+import { clearProjectResearchCache } from './services/projectResearchCache'
 import { clearWorkerReadCache } from './services/workerApi'
 import { createProjectInFirestore, listMyProjects, type NewProject } from './services/projectStore'
 import { completeSsoLogin, getSsoConfigurationError, hasSsoCallbackParameters, startSsoLogin } from './services/ssoLogin'
@@ -149,7 +149,7 @@ function ResearchPulseApp() {
           return
         }
 
-        clearKeywordMonitoringCache()
+        clearProjectResearchCache()
         clearWorkerReadCache()
         void loadProjects()
         if (developmentAutoLoginEnabled && !skipDevelopmentAutoSignIn.current) {
@@ -213,6 +213,10 @@ function ResearchPulseApp() {
 
   const handleProjectOpen = (project: LocalProject, tab: ProjectTab = 'overview') => {
     navigate({ page: 'project-detail', projectId: project.id, tab })
+  }
+
+  const handleProjectTopicsChange = (projectId: string, topics: string[]) => {
+    setProjects((current) => current.map((project) => project.id === projectId ? { ...project, topics } : project))
   }
 
   const handleNavigate = (page: AppPage) => {
@@ -305,7 +309,12 @@ function ResearchPulseApp() {
                 onProjectOpen={handleProjectOpen}
               />
               : activeProject
-                ? <ProjectDetailPage project={activeProject} activeTab={projectTab} onTabChange={handleProjectTabChange} />
+                ? <ProjectDetailPage
+                  project={activeProject}
+                  activeTab={projectTab}
+                  onTabChange={handleProjectTabChange}
+                  onProjectTopicsChange={(topics) => handleProjectTopicsChange(activeProject.id, topics)}
+                />
                 : activePage === 'project-detail'
                   ? <Box className="project-overview-error" role={projectsError ? 'alert' : 'status'}>
                     <Typography>{projectsError ? 'Could not load this project.' : projectsLoading ? 'Loading project...' : 'Project not found.'}</Typography>

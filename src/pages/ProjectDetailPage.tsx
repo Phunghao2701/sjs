@@ -10,6 +10,8 @@ import {
 } from '@heroicons/react/24/outline'
 import type { LocalProject, ProjectTab } from '../types/project'
 import { getKeywordMonitoringResult, type KeywordMonitoringResult } from '../services/keywordMonitoring'
+import { getProjectResearchData } from '../services/projectResearchCache'
+import { updateProjectTopicsInFirestore } from '../services/projectStore'
 import { getProjectOverview, searchKeywords, searchResearch, type ApiPagination, type WorkerKeyword, type WorkerProjectOverview, type WorkerWork } from '../services/workerApi'
 
 const projectTabs: { label: string; value: ProjectTab }[] = [
@@ -24,6 +26,7 @@ type ProjectDetailPageProps = {
   project: LocalProject
   activeTab: ProjectTab
   onTabChange: (tab: ProjectTab) => void
+  onProjectTopicsChange: (topics: string[]) => void
 }
 
 type DistributionItem = { label: string; count: number }
@@ -81,11 +84,13 @@ function buildProjectOverview(overview: WorkerProjectOverview): ProjectOverviewD
   }
 }
 
-export function ProjectDetailPage({ project, activeTab, onTabChange }: ProjectDetailPageProps) {
+export function ProjectDetailPage({ project, activeTab, onTabChange, onProjectTopicsChange }: ProjectDetailPageProps) {
   const projectTabsRef = useRef<HTMLElement | null>(null)
   const [trackedTopics, setTrackedTopics] = useState(project.topics)
   const [topicQuery, setTopicQuery] = useState('')
   const [memberQuery, setMemberQuery] = useState('')
+  const [topicsSaving, setTopicsSaving] = useState(false)
+  const [topicsSaveError, setTopicsSaveError] = useState('')
   const [overviewRequestVersion, setOverviewRequestVersion] = useState(0)
   const [overviewRequest, setOverviewRequest] = useState<ProjectOverviewRequest | null>(null)
   const projectSearch = useMemo(() => buildProjectSearch(trackedTopics, project.subject), [project.subject, trackedTopics])
@@ -97,7 +102,12 @@ export function ProjectDetailPage({ project, activeTab, onTabChange }: ProjectDe
 
   useEffect(() => {
     const controller = new AbortController()
-    getProjectOverview(projectSearch.query, controller.signal)
+    getProjectResearchData(
+      project.id,
+      JSON.stringify(['overview', projectSearch.query]),
+      (signal) => getProjectOverview(projectSearch.query, signal),
+      controller.signal,
+    )
       .then((result) => {
         setOverviewRequest({
           key: overviewRequestKey,
@@ -116,7 +126,7 @@ export function ProjectDetailPage({ project, activeTab, onTabChange }: ProjectDe
       })
 
     return () => controller.abort()
-  }, [overviewRequestKey, projectSearch.query])
+  }, [overviewRequestKey, project.id, projectSearch.query])
 
   useEffect(() => {
     const tabs = projectTabsRef.current
@@ -137,10 +147,24 @@ export function ProjectDetailPage({ project, activeTab, onTabChange }: ProjectDe
     return trackedTopics.filter((topic) => topic.toLocaleLowerCase().includes(query))
   }, [topicQuery, trackedTopics])
 
+  const saveTopics = async (nextTopics: string[]) => {
+    setTopicsSaving(true)
+    setTopicsSaveError('')
+    try {
+      await updateProjectTopicsInFirestore(project.id, nextTopics)
+      setTrackedTopics(nextTopics)
+      onProjectTopicsChange(nextTopics)
+    } catch (error: unknown) {
+      setTopicsSaveError(error instanceof Error ? error.message : 'Could not save project keywords.')
+    } finally {
+      setTopicsSaving(false)
+    }
+  }
+
   const addTopic = (topic: string) => {
     const value = topic.trim()
-    if (!value || trackedTopics.some((topic) => topic.toLocaleLowerCase() === value.toLocaleLowerCase())) return
-    setTrackedTopics((current) => [...current, value])
+    if (topicsSaving || !value || trackedTopics.some((topic) => topic.toLocaleLowerCase() === value.toLocaleLowerCase())) return
+    void saveTopics([...trackedTopics, value])
   }
 
   return (
@@ -179,13 +203,18 @@ export function ProjectDetailPage({ project, activeTab, onTabChange }: ProjectDe
         projectQuery={projectSearch.query}
       />}
       {activeTab === 'keywords-monitoring' && <KeywordContent
+        projectId={project.id}
         subject={project.subject}
         trackedTopics={trackedTopics}
         visibleTopics={visibleTopics}
         topicQuery={topicQuery}
         onTopicQueryChange={setTopicQuery}
         onAddTopic={addTopic}
-        onRemoveTopic={(topic) => setTrackedTopics((current) => current.filter((item) => item !== topic))}
+        onRemoveTopic={(topic) => {
+          if (!topicsSaving) void saveTopics(trackedTopics.filter((item) => item !== topic))
+        }}
+        topicsSaving={topicsSaving}
+        topicsSaveError={topicsSaveError}
       />}
       {activeTab === 'members' && <MembersContent memberQuery={memberQuery} onMemberQueryChange={setMemberQuery} />}
     </Box>
@@ -621,15 +650,20 @@ function NewsFeedContent({ projectId, topics, projectQuery }: {
   useEffect(() => {
     const controller = new AbortController()
     const timeout = window.setTimeout(() => {
-      searchResearch('Works', {
-        query,
-        page,
-        limit: pageSize,
-        sortBy: 'publication_year',
-        sortOrder: 'desc',
-        publication_year: publicationYear === 'All years' ? undefined : publicationYear,
-        include_facets: 0,
-      }, controller.signal)
+      getProjectResearchData(
+        projectId,
+        JSON.stringify(['news-feed', { query, page, limit: pageSize, publicationYear, sortBy: 'publication_year', sortOrder: 'desc' }]),
+        (signal) => searchResearch('Works', {
+          query,
+          page,
+          limit: pageSize,
+          sortBy: 'publication_year',
+          sortOrder: 'desc',
+          publication_year: publicationYear === 'All years' ? undefined : publicationYear,
+          include_facets: 0,
+        }, signal),
+        controller.signal,
+      )
         .then((result) => setRequest({
           key: requestKey,
           status: 'success',
@@ -738,6 +772,7 @@ function NewsFeedContent({ projectId, topics, projectQuery }: {
 }
 
 function KeywordContent({
+  projectId,
   subject,
   trackedTopics,
   visibleTopics,
@@ -745,7 +780,10 @@ function KeywordContent({
   onTopicQueryChange,
   onAddTopic,
   onRemoveTopic,
+  topicsSaving,
+  topicsSaveError,
 }: {
+  projectId: string
   subject: string
   trackedTopics: string[]
   visibleTopics: string[]
@@ -753,6 +791,8 @@ function KeywordContent({
   onTopicQueryChange: (value: string) => void
   onAddTopic: (topic: string) => void
   onRemoveTopic: (topic: string) => void
+  topicsSaving: boolean
+  topicsSaveError: string
 }) {
   const [results, setResults] = useState<Record<string, KeywordMonitoringRequest>>({})
   const [retryVersion, setRetryVersion] = useState(0)
@@ -785,7 +825,12 @@ function KeywordContent({
 
     const controller = new AbortController()
     const timeout = window.setTimeout(() => {
-      searchKeywords(keywordSearch, controller.signal)
+      getProjectResearchData(
+        projectId,
+        JSON.stringify(['keyword-suggestions', keywordSearch.trim().toLocaleLowerCase()]),
+        (signal) => searchKeywords(keywordSearch, signal),
+        controller.signal,
+      )
         .then((items) => {
           if (!controller.signal.aborted) setKeywordSuggestionRequest({ key: keywordSearchKey, status: 'success', items })
         })
@@ -804,7 +849,7 @@ function KeywordContent({
       window.clearTimeout(timeout)
       controller.abort()
     }
-  }, [isKeywordSuggestionsOpen, keywordSearch, keywordSearchKey, keywordSuggestionRequest?.key])
+  }, [isKeywordSuggestionsOpen, keywordSearch, keywordSearchKey, keywordSuggestionRequest?.key, projectId])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -817,7 +862,7 @@ function KeywordContent({
         if (!topic) return
 
         try {
-          const data = await getKeywordMonitoringResult(topic, controller.signal)
+          const data = await getKeywordMonitoringResult(projectId, topic, controller.signal)
           if (!controller.signal.aborted) setResults((current) => ({ ...current, [topic]: { status: 'success', data } }))
         } catch (error: unknown) {
           if (!controller.signal.aborted) {
@@ -832,7 +877,7 @@ function KeywordContent({
 
     void Promise.all(Array.from({ length: Math.min(3, uniqueTopics.length) }, () => loadNextTopic()))
     return () => controller.abort()
-  }, [retryVersion, uniqueTopics])
+  }, [projectId, retryVersion, uniqueTopics])
 
   return <Box className="project-tab-content">
     <Box className="project-tab-intro">
@@ -842,6 +887,7 @@ function KeywordContent({
     <Box className="keyword-monitoring-grid">
       <Paper variant="outlined" className="watchlist-card">
         <Typography component="h3">Watchlist</Typography>
+        {topicsSaveError && <Typography className="data-status-error" role="alert">{topicsSaveError}</Typography>}
         <Box className="keyword-search">
           <InputBase
             value={topicQuery}
@@ -853,7 +899,7 @@ function KeywordContent({
         <Box className="tracked-keyword-list">
           {visibleTopics.length ? visibleTopics.map((topic) => <Box className="tracked-keyword-row" key={topic}>
             <Typography>{topic}</Typography>
-            <IconButton aria-label={`Remove ${topic}`} size="small" onClick={() => onRemoveTopic(topic)}>
+            <IconButton aria-label={`Remove ${topic}`} size="small" onClick={() => onRemoveTopic(topic)} disabled={topicsSaving}>
               <XMarkIcon width={14} height={14} />
             </IconButton>
           </Box>) : <Typography className="project-list-empty">No tracked keywords found.</Typography>}
@@ -903,7 +949,7 @@ function KeywordContent({
                           <IconButton
                             onClick={() => onAddTopic(name)}
                             aria-label={selected ? `${name} is already tracked` : `Add ${name} to watchlist`}
-                            disabled={selected}
+                            disabled={selected || topicsSaving}
                             size="small"
                             className={selected ? 'keyword-add is-selected' : 'keyword-add'}
                           >
